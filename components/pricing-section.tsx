@@ -20,24 +20,54 @@ export function PricingSection() {
             <TabsTrigger value="telehealth">Telehealth</TabsTrigger>
           </TabsList>
 
-          <div className="flex flex-col justify-center items-center gap-10">
-            <img
-              className="md:w-1/2"
-              src="/pricing-1.png"
-              alt="Peaceful wellness scene"
-            />
+          <div className="grid md:grid-cols-2 grid-cols-1 justify-center gap-10">
+            <div className="flex justify-center items-start">
+              <img
+                className="md:w-2/3"
+                src="/pricing-1.png"
+                alt="Peaceful wellness scene"
+              />
+            </div>
 
-            <img
-              className="md:w-1/2"
-              src="/pricing-2.png"
-              alt="Peaceful wellness scene"
-            />
+            <div className="flex justify-center items-start">
+              <img
+                className="md:w-2/3"
+                src="/pricing-2.png"
+                alt="Peaceful wellness scene"
+              />
+            </div>
 
-            <img
-              className="md:w-1/2"
-              src="/pricing-3.png"
-              alt="Peaceful wellness scene"
-            />
+            <div className="flex justify-center items-start">
+              <img
+                className="md:w-2/3"
+                src="/pricing-3.png"
+                alt="Peaceful wellness scene"
+              />
+            </div>
+
+            <div className="flex justify-center items-start">
+              <img
+                className="md:w-2/3"
+                src="/pricing-4.png"
+                alt="Peaceful wellness scene"
+              />
+            </div>
+
+            <div className="flex justify-center items-start">
+              <img
+                className="md:w-2/3"
+                src="/pricing-5.png"
+                alt="Peaceful wellness scene"
+              />
+            </div>
+
+            <div className="flex justify-center items-start">
+              <img
+                className="md:w-2/3"
+                src="/pricing-6.png"
+                alt="Peaceful wellness scene"
+              />
+            </div>
           </div>
         </Tabs>
       </div>
