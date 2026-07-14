@@ -20,13 +20,12 @@ export function OfferSection() {
               alt="Peaceful wellness scene"
             />
 
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-lg bg-white border-primary text-primary px-20"
-            >
-              Start for free today
-            </Button>
+        <Button
+          variant="outline"
+          className="h-14 md:h-16 px-12 md:px-24 text-lg md:text-xl font-medium bg-white border-primary text-primary rounded-xl hover:bg-primary hover:text-white transition"
+        >
+          Start for free today
+        </Button>
           </div>
         </section>
     );

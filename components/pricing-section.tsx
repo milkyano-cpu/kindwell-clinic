@@ -276,6 +276,14 @@ export function PricingSection() {
             </div>
           </TabsContent>
         </Tabs>
+
+        <p className="mt-8 px-6 text-center text-[14px] leading-6 text-primary md:hidden">
+            Patients seeking both alternative medicine
+            <br />
+            and smoking cessation must book
+            <br />
+            an alternative medicine consultation.
+          </p>
       </div>
     </section>
   );

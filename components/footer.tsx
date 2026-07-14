@@ -1,13 +1,16 @@
-import { Heart, Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram } from "lucide-react";
+import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="bg-card border-t py-16">
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col justify-center items-center gap-2 w-full">
-          {/* Brand */}
-          <div className="flex flex-col gap-2 justify-center items-center w-full">
-            <div className="flex justify-center items-center">
+    <footer className="bg-white border-t py-10 md:py-14">
+      <div className="container mx-auto max-w-5xl px-6">
+        {/* Logo */}
+        <div className="flex justify-center">
+            <Link
+                href="/"
+                className="inline-flex items-center justify-center hover:opacity-80 transition-opacity"
+              >
               <svg
                 className="h-10"
                 viewBox="0 0 201 55"
@@ -75,86 +78,72 @@ export function Footer() {
                   fill="#2A2A2B"
                 />
               </svg>
-            </div>
-            <p className="text-primary text-center">
-              We're here to help you navigate your holistic health journey. Chat
-              to us about your medical condition.
-            </p>
+            </Link>
+        </div>
+
+      <p className="mt-5 text-center text-[15px] md:text-[18px] leading-5 md:leading-relaxed text-[#6E78FF] px-2">
+        We're here to help you navigate your holistic health journey. Chat to us
+        about your medical condition.
+      </p>
+
+        {/* Divider */}
+        <div className="my-6 md:my-8 h-px bg-black" />
+
+        {/* Contact */}
+        <div className="grid grid-cols-2 gap-4 md:flex md:justify-between text-[13px] md:text-lg">
+          {/* Left */}
+          <div className="space-y-2">
+            <a
+              href="tel:0399896930"
+              className="flex items-center gap-2 hover:opacity-70 transition"
+            >
+              <Phone className="h-4 w-4 text-black" />
+              <span className="text-[12px] leading-tight whitespace-nowrap md:text-base md:whitespace-normal">03 9989 6930</span>
+            </a>
+
+            <a
+              href="https://instagram.com/kindwellclinic"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 hover:opacity-70 transition"
+            >
+              <Instagram className="h-4 w-4 text-black" />
+              <span className="text-[12px] leading-tight whitespace-nowrap md:text-base md:whitespace-normal">@kindwellclinic</span>
+            </a>
           </div>
 
-          <div className="w-full bg-black h-[1px]" />
+          {/* Right */}
+          <div className="space-y-2 text-right">
+            <a
+              href="mailto:clinic@kindwell.com.au"
+              className="flex items-center justify-end gap-2 hover:opacity-70 transition"
+            >
+               <span className="text-[12px] leading-tight whitespace-nowrap md:text-base md:whitespace-normal">clinic@kindwell.com.au</span>
+              <Mail className="h-4 w-4 text-black shrink-0" />
+            </a>
 
-          <div className="flex justify-between w-full mt-2">
-            {/* Contact Info */}
-            <div>
-              <h3 className="font-semibold text-foreground mb-4">Contact</h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">
-                    03 9989 6930
-                  </span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">
-                    clinic@kindwell.com.au
-                  </span>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <MapPin className="h-4 w-4 text-primary mt-0.5" />
-                  <span className="text-sm text-muted-foreground">
-                    381 Smith street, Fitzroy, VIC, 3065
-                  </span>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <MapPin className="h-4 w-4 text-primary mt-0.5" />
-                  <span className="text-sm text-muted-foreground">
-                    @kindwellclinic
-                  </span>
-                </div>
-              </div>
-            </div>
+            <a
+              href="https://maps.google.com/?q=381+Smith+Street+Fitzroy+VIC+3065"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-end gap-2 hover:opacity-70 transition"
+            >
+              <span className="text-[12px] leading-tight whitespace-nowrap md:text-base md:whitespace-normal">
+                381 Smith Street, Fitzroy, VIC, 3065
+              </span>
 
-            {/* Services */}
-            <div className="text-end">
-              <h3 className="font-semibold text-foreground mb-4">Services</h3>
-              <div className="space-y-2">
-                <a
-                  href="#"
-                  className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Alternative Medicine
-                </a>
-                <a
-                  href="#"
-                  className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Medicinal Cannabis
-                </a>
-                <a
-                  href="#"
-                  className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Smoking Cessation
-                </a>
-                <a
-                  href="#"
-                  className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Plant-based Therapies
-                </a>
-              </div>
-            </div>
+              <MapPin className="h-4 w-4 text-black shrink-0" />
+            </a>
           </div>
         </div>
 
-        <div className="border-t mt-12 pt-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            © 2024 Kindwell Clinic. All rights reserved.
+      </div>
+        {/* Copyright */}
+        <div className="mt-8 border-t border-gray-200 pt-5">
+          <p className="text-center text-xs md:text-sm text-gray-500">
+            Copyright © 2024 Kindwell Clinic. All rights reserved.
           </p>
         </div>
-      </div>
     </footer>
   );
 }

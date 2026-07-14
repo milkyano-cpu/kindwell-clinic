@@ -9,7 +9,7 @@ export function Header() {
   const navLinkClass = "relative text-sm font-medium text-muted-foreground transition-all duration-300 hover:text-primary after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 hover:after:w-full";
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           {/* Announcement */}
           <div className="bg-[#6E78FF]">
             <div className="container mx-auto flex min-h-[64px] items-center justify-center px-6 py-3 sm:h-16 sm:py-0">
@@ -129,14 +129,14 @@ export function Header() {
           </nav>
 
           {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setOpen(!open)}
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden h-10 w-10 p-0"
+              onClick={() => setOpen(!open)}
+            >
+              <Menu className="!h-7 !w-7" strokeWidth={2.25} />
+            </Button>
               {open && (
                 <div className="absolute left-0 top-full z-50 h-[calc(100vh-100%)] w-full overflow-y-auto bg-white shadow-xl md:hidden">
                   <nav className="flex flex-col p-6 space-y-5">
