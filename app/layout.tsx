@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="overflow-x-hidden">
       <head>
         <style>{`
 html {
@@ -25,12 +25,14 @@ html {
 }
         `}</style>
 
-        {/* Favicon and app icons */}
         <link rel="icon" href="/favicon.ico" type="image/webp" />
         <link rel="apple-touch-icon" href="/favicon.ico" />
         <link rel="shortcut icon" href="/favicon.ico" />
       </head>
-      <body>{children}</body>
+
+      <body className="overflow-x-hidden">
+        {children}
+      </body>
     </html>
   );
 }

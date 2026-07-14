@@ -121,3 +121,47 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes arrow-wave {
+  0% {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+
+  40% {
+    opacity: .35;
+  }
+
+  80% {
+    opacity: .15;
+    transform: translateY(5px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+}
+
+.arrow {
+  transform-origin: center;
+  animation: arrow-wave 1.4s infinite ease-in-out;
+}
+
+.arrow-1 {
+  animation-delay: 0s;
+}
+
+.arrow-2 {
+  animation-delay: .2s;
+}
+
+.arrow-3 {
+  animation-delay: .4s;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}

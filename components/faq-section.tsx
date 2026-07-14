@@ -37,7 +37,7 @@ const faqs = [
 export function FAQSection() {
   return (
     <section id="faq" className="py-20 bg-[#EDF1FF] text-primary">
-      <div className="container flex flex-col md:flex-row justify-center items-center mx-auto gap-16 px-4">
+      <div className="mx-auto flex w-full flex-col items-center justify-center gap-16 px-4 md:flex-row">
         <div className="text-center flex justify-center items-center w-xl">
           <h2 className="text-6xl md:text-4xl font-semibold mb-4">FAQ's</h2>
         </div>
