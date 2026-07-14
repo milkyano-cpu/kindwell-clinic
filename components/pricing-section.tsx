@@ -243,7 +243,7 @@ export function PricingSection() {
             Affordable alternative <br /> healthcare for everyday
           </h2>
         </div>
-
+ 
         <Tabs defaultValue="in-person" className="max-w-4xl mx-auto flex flex-col items-center">
           <TabsList className="grid grid-cols-2 mb-10 bg-white rounded-full p-1 h-auto">
             <TabsTrigger
