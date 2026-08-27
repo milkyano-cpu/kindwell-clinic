@@ -123,9 +123,9 @@ export function Header() {
             <Link href="/faq" className={navLinkClass}>
               FAQ's
             </Link>
-            <Button className="bg-[#FF8D54] hover:bg-[#FF8D54]/90 rounded-xl h-8 ml-4">
-              Book Now
-            </Button>
+          <Button asChild className="bg-[#FF8D54] hover:bg-[#FF8D54]/90 rounded-xl h-8 ml-4">
+            <Link href="/booking">Book Now</Link>
+          </Button>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -148,7 +148,7 @@ export function Header() {
                     <Link href="/faq">FAQ's</Link>
 
                     <Button className="mt-4 bg-[#FF8D54] hover:bg-[#FF8D54]/90">
-                      Book Now
+                      <Link href="/booking">Book Now</Link>
                     </Button>
                   </nav>
                 </div>
