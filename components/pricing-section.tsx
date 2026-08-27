@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { ConsultationMode, ServiceType } from "@/lib/booking/types";
 
 type PricingItem = {
   duration: string;
@@ -19,7 +20,8 @@ type PricingCardData = {
   subtitleClassName: string;
   items: PricingItem[];
   noteVariant: "muted" | "promo";
-  bookNowHref?: string;
+  service: ServiceType;
+  mode: ConsultationMode;
 };
 
 const inPersonCards: PricingCardData[] = [
@@ -30,6 +32,8 @@ const inPersonCards: PricingCardData[] = [
     subtitle: "Medicinal Cannabis",
     subtitleClassName: "text-[#8CC63F]",
     noteVariant: "muted",
+    service: "alternative-medicine",
+    mode: "face-to-face",
     items: [
       {
         duration: "30 minutes",
@@ -63,6 +67,8 @@ const inPersonCards: PricingCardData[] = [
     subtitle: "Smoking Cessation",
     subtitleClassName: "text-[#FF8D54]",
     noteVariant: "muted",
+    service: "smoking-cessation",
+    mode: "face-to-face",
     items: [
       {
         duration: "15 minutes",
@@ -91,6 +97,8 @@ const telehealthCards: PricingCardData[] = [
     subtitle: "Medicinal Cannabis",
     subtitleClassName: "text-[#8CC63F]",
     noteVariant: "promo",
+    service: "alternative-medicine",
+    mode: "telehealth",
     items: [
       {
         duration: "30 minutes",
@@ -124,6 +132,8 @@ const telehealthCards: PricingCardData[] = [
     subtitle: "Smoking Cessation",
     subtitleClassName: "text-[#FF8D54]",
     noteVariant: "promo",
+    service: "smoking-cessation",
+    mode: "telehealth",
     items: [
       {
         duration: "15 minutes",
@@ -226,7 +236,7 @@ function PricingCard({ data }: { data: PricingCardData }) {
           asChild
           className="w-full h-12 rounded-xl bg-[#FF8D54] hover:bg-[#FF8D54]/90 text-white text-base font-semibold"
         >
-          <a href={data.bookNowHref ?? "#"}>Book Now</a>
+          <a href={`/booking?service=${data.service}&mode=${data.mode}`}>Book Now</a>
         </Button>
       </div>
     </div>
@@ -243,14 +253,14 @@ export function PricingSection() {
             Affordable alternative <br /> healthcare for everyday
           </h2>
         </div>
- 
+
         <Tabs defaultValue="in-person" className="max-w-4xl mx-auto flex flex-col items-center">
           <TabsList className="grid grid-cols-2 mb-10 bg-white rounded-full p-1 h-auto">
             <TabsTrigger
               value="in-person"
               className="rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-white"
             >
-              In-Person
+              Face To Face
             </TabsTrigger>
             <TabsTrigger
               value="telehealth"
@@ -278,12 +288,12 @@ export function PricingSection() {
         </Tabs>
 
         <p className="mt-8 px-6 text-center text-[14px] leading-6 text-primary md:hidden">
-            Patients seeking both alternative medicine
-            <br />
-            and smoking cessation must book
-            <br />
-            an alternative medicine consultation.
-          </p>
+          Patients seeking both alternative medicine
+          <br />
+          and smoking cessation must book
+          <br />
+          an alternative medicine consultation.
+        </p>
       </div>
     </section>
   );

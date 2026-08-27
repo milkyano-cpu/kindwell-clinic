@@ -12,7 +12,7 @@ import { ReferringGPStep } from "./steps/referring-gp-step";
 import { QuestionnaireStep } from "./steps/questionnaire-step";
 import { ConfirmPaymentStep } from "./steps/confirm-payment-step";
 import { ConfirmedStep } from "./steps/confirmed-step";
-import type { StepId, StepProps } from "@/lib/booking/types";
+import type { ConsultationMode, ServiceType, StepId, StepProps } from "@/lib/booking/types";
 
 const STEP_COMPONENTS: Record<StepId, ComponentType<StepProps>> = {
   service: ServiceStep,
@@ -27,11 +27,15 @@ const STEP_COMPONENTS: Record<StepId, ComponentType<StepProps>> = {
   confirmed: ConfirmedStep,
 };
 
-// step dengan form 2 kolom butuh lebar lebih — sisanya (single column) tetep sempit
 const WIDE_STEPS: StepId[] = ["patient-details", "questionnaire"];
 
-export function BookingFlow() {
-  const flow = useBookingFlow();
+interface BookingFlowProps {
+  initialService?: ServiceType;
+  initialMode?: ConsultationMode;
+}
+
+export function BookingFlow({ initialService, initialMode }: BookingFlowProps) {
+  const flow = useBookingFlow({ service: initialService, consultationMode: initialMode });
   const StepComponent = STEP_COMPONENTS[flow.currentStep];
   const isWide = WIDE_STEPS.includes(flow.currentStep);
 
@@ -40,11 +44,8 @@ export function BookingFlow() {
       <ProgressStepper steps={flow.steps} currentIndex={flow.stepIndex} />
       <div className="relative min-h-[80vh] flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src="/medical-pattern.png" alt="" className="w-full h-full object-cover opacity-100" />
-          <div
-            className="absolute inset-0"
-            style={{ background: "radial-gradient(circle at center, white 30%, transparent 75%)" }}
-          />
+          <img src="/medical-pattern.png" alt="" className="w-full h-full object-cover opacity-20" />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at center, white 30%, transparent 75%)" }} />
         </div>
         <div className={`container mx-auto px-4 relative z-10 ${isWide ? "max-w-2xl" : "max-w-lg"}`}>
           <StepComponent {...flow} />
