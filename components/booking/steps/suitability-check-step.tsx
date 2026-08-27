@@ -17,7 +17,7 @@ export function SuitabilityCheckStep({ data, update, next }: StepProps) {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 py-15">
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold text-[#6E78FF] text-balance">A quick suitability check.</h1>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
