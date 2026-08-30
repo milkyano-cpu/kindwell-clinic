@@ -7,14 +7,45 @@ import { getFeeSchedule } from '@/lib/stripe/fee'
 import { logger } from '@/lib/logger'
 
 const PRACTICE_ID = process.env.MEDIRECORDS_PRACTICE_ID!
-const DEFAULT_PROVIDER_ID = process.env.MEDIRECORDS_PROVIDER_ID!
+const DEFAULT_PROVIDER_ID = process.env.MEDIRECORDS_PROVIDER_ID || undefined
+
+function resolveAppointmentTypeId(
+  mode: 'telehealth' | 'face-to-face',
+  appointmentType: 'initial' | 'follow-up',
+  service: 'alternative-medicine' | 'smoking-cessation',
+  duration?: number,
+): string {
+  let key: string
+
+  if (appointmentType === 'follow-up') {
+    const modeKey = mode === 'telehealth' ? 'TH' : 'F2F'
+    const svcKey = service === 'alternative-medicine' ? 'ALT_MED' : 'SMK_CES'
+    key = `MEDIRECORDS_APPT_TYPE_${svcKey}_${modeKey}_FU`
+  } else {
+    // initial
+    if (mode === 'telehealth' && service === 'alternative-medicine') {
+      // Variable duration: 10, 15, or 20 min
+      const min = duration ?? 20
+      key = `MEDIRECORDS_APPT_TYPE_ALT_MED_TH_${min}`
+    } else if (mode === 'face-to-face' && service === 'alternative-medicine') {
+      key = 'MEDIRECORDS_APPT_TYPE_ALT_MED_F2F'
+    } else {
+      // smoking-cessation initial (only F2F offered)
+      key = 'MEDIRECORDS_APPT_TYPE_SMK_CES_F2F'
+    }
+  }
+
+  const val = process.env[key]
+  if (!val) throw new Error(`Missing env: ${key}`)
+  return val
+}
 
 const schema = z.object({
   scheduleTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Format: YYYY-MM-DDTHH:mm'),
-  appointmentTypeId: z.string().uuid(),
   consultationMode: z.enum(['telehealth', 'face-to-face']),
   appointmentType: z.enum(['initial', 'follow-up']),
   serviceCategory: z.enum(['alternative-medicine', 'smoking-cessation']),
+  duration: z.number().int().optional(),
   patient: z.object({
     firstName: z.string().min(1).nullable(),
     lastName: z.string().min(1),
@@ -27,9 +58,9 @@ const schema = z.object({
 
 export const POST = withACL(
   async (_, body: z.infer<typeof schema>) => {
-    const fee = getFeeSchedule(body.consultationMode, body.appointmentType, body.serviceCategory)
+    const fee = getFeeSchedule(body.consultationMode, body.appointmentType, body.serviceCategory, body.duration)
+    const appointmentTypeId = resolveAppointmentTypeId(body.consultationMode, body.appointmentType, body.serviceCategory, body.duration)
 
-    // Create patient first — appointment requires patientId
     const patient = await createPatient({
       defaultPracticeId: PRACTICE_ID,
       usualDoctorId: DEFAULT_PROVIDER_ID,
@@ -42,10 +73,9 @@ export const POST = withACL(
       mobilePhone: body.patient.mobilePhone || null,
     })
 
-    // Lock slot — status 2 (Booked), released on payment failure
     const appointment = await createAppointment({
       patientId: patient.id,
-      appointmentTypeId: body.appointmentTypeId,
+      appointmentTypeId,
       scheduleTime: body.scheduleTime,
       appointmentStatus: 2,
       appointmentIntervalCode: fee.intervalCode,

@@ -39,6 +39,8 @@ export function BookingFlow({ initialService, initialMode }: BookingFlowProps) {
   const StepComponent = STEP_COMPONENTS[flow.currentStep];
   const isWide = WIDE_STEPS.includes(flow.currentStep);
 
+  if (!flow.hydrated) return <div className="min-h-screen" />;
+
   return (
     <>
       <ProgressStepper steps={flow.steps} currentIndex={flow.stepIndex} />

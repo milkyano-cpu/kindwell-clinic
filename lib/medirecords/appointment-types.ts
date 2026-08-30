@@ -2,6 +2,7 @@ import { mrClient } from './client'
 import type { MRAppointmentType, MRPage } from './types'
 
 const PRACTICE_ID = process.env.MEDIRECORDS_PRACTICE_ID!
+const BASE = process.env.MEDIRECORDS_APPOINTMENTS_URL
 
 export async function getAppointmentTypes(opts?: {
   telehealth?: boolean
@@ -13,6 +14,7 @@ export async function getAppointmentTypes(opts?: {
 
   const res = await mrClient.get<MRPage<MRAppointmentType>>(
     `/v1/practices/${PRACTICE_ID}/appointment-types?${params}`,
+    { baseUrl: BASE },
   )
   return res.data ?? []
 }

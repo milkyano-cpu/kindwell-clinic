@@ -3,6 +3,7 @@ import type { MRPatient, MRPatientCreate } from './types'
 
 const TEST_PREFIX = process.env.MEDIRECORDS_TEST_PREFIX ?? ''
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+const BASE = process.env.MEDIRECORDS_PATIENTS_URL
 
 export async function createPatient(data: MRPatientCreate): Promise<MRPatient> {
   const payload: MRPatientCreate = {
@@ -12,5 +13,5 @@ export async function createPatient(data: MRPatientCreate): Promise<MRPatient> {
     lastName: !IS_PRODUCTION ? `${TEST_PREFIX}${data.lastName}` : data.lastName,
   }
 
-  return mrClient.post<MRPatient>('/v2/patients', payload)
+  return mrClient.post<MRPatient>('/v2/patients', payload, { baseUrl: BASE })
 }

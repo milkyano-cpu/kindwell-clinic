@@ -17,6 +17,18 @@ function generateSlots(date: string, durationMinutes: number): string[] {
   return slots
 }
 
+function toBookedSet(appointments: Awaited<ReturnType<typeof getAppointments>>): Set<string> {
+  return new Set(
+    appointments
+      .filter(a => a.appointmentStatus !== 8)
+      .map(a => a.scheduleTime.slice(0, 16)),
+  )
+}
+
+function pad2(n: number) {
+  return String(n).padStart(2, '0')
+}
+
 export async function getAvailableSlots(opts: {
   date: string
   durationMinutes: number
@@ -26,17 +38,43 @@ export async function getAvailableSlots(opts: {
     appointmentDateRangeStart: `${opts.date}T00:00`,
     appointmentDateRangeEnd: `${opts.date}T23:59`,
     providerId: opts.providerId,
-    // Include booked (2) and confirmed (3) appointments as taken
   })
 
-  // Treat any non-canceled appointment as occupying that slot
-  const bookedTimes = new Set(
-    booked
-      .filter(a => a.appointmentStatus !== 8) // 8 = Cancelled
-      .map(a => a.scheduleTime.slice(0, 16)),
-  )
+  const bookedTimes = toBookedSet(booked)
+  return generateSlots(opts.date, opts.durationMinutes).filter(slot => !bookedTimes.has(slot))
+}
 
-  return generateSlots(opts.date, opts.durationMinutes).filter(
-    slot => !bookedTimes.has(slot),
-  )
+export async function getAvailableDatesForMonth(opts: {
+  year: number
+  month: number
+  durationMinutes: number
+  providerId?: string
+}): Promise<string[]> {
+  const { year, month, durationMinutes, providerId } = opts
+  const daysInMonth = new Date(year, month, 0).getDate()
+  const monthStr = pad2(month)
+
+  const booked = await getAppointments({
+    appointmentDateRangeStart: `${year}-${monthStr}-01T00:00`,
+    appointmentDateRangeEnd: `${year}-${monthStr}-${pad2(daysInMonth)}T23:59`,
+    providerId,
+  })
+
+  const bookedTimes = toBookedSet(booked)
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const availableDates: string[] = []
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day)
+    if (date < today) continue
+
+    const dateStr = `${year}-${monthStr}-${pad2(day)}`
+    const hasSlot = generateSlots(dateStr, durationMinutes).some(s => !bookedTimes.has(s))
+    if (hasSlot) availableDates.push(dateStr)
+  }
+
+  return availableDates
 }

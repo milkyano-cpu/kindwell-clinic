@@ -40,7 +40,7 @@ function SectionCard({ section, answers, onToggle, onTextChange }: {
                 type="checkbox"
                 checked={answers[c.id] === true}
                 onChange={() => onToggle(c.id)}
-                className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[#6E78FF]"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#6E78FF]"
               />
               <span>{c.label}</span>
             </label>

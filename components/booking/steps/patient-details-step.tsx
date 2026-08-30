@@ -1,7 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { PatientDetails, StepProps } from "@/lib/booking/types";
 import { validatePatient, type PatientFieldErrors } from "@/lib/booking/patient-validation";
 
@@ -15,22 +17,6 @@ const emptyPatient: PatientDetails = {
 const TITLES = ["Mr", "Mrs", "Ms", "Miss", "Dr", "Other"];
 const GENDERS = ["Male", "Female"];
 const STATES = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"];
-
-function SlotHeldTimer() {
-  const [seconds, setSeconds] = useState(15 * 60);
-  useEffect(() => {
-    const id = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const m = Math.floor(seconds / 60);
-  const s = String(seconds % 60).padStart(2, "0");
-  return (
-    <p className="flex items-center justify-center gap-1.5 text-sm font-medium text-amber-600">
-      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-      Slot held — {m}:{s} left
-    </p>
-  );
-}
 
 function TextField({ label, value, placeholder, error, onChange }: { label: string; value: string; placeholder?: string; error?: string; onChange: (v: string) => void }) {
   return (
@@ -71,6 +57,70 @@ function SelectField({ label, value, placeholder, options, error, onChange }: { 
   );
 }
 
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const maxDob = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+
+function formatDobDisplay(date: Date) {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function parseDob(value: string): Date | undefined {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) return undefined;
+  const d = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
+function DOBField({ value, error, onChange }: { value: string; error?: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = parseDob(value);
+
+  const handleSelect = (d: Date | undefined) => {
+    if (d) {
+      onChange(formatDobDisplay(d));
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <label className="text-sm font-medium">Date of Birth*</label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={`w-full flex items-center justify-between rounded-lg border px-4 py-3 text-sm focus:outline-none focus:ring-1 ${
+              error ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-[#6E78FF]"
+            }`}
+          >
+            <span className={value ? "text-foreground" : "text-gray-400"}>
+              {value || "DD/MM/YYYY"}
+            </span>
+            <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-4" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            onSelect={handleSelect}
+            disabled={(d) => d > maxDob}
+            defaultMonth={selected ?? maxDob}
+            captionLayout="dropdown"
+            startMonth={new Date(1920, 0)}
+            endMonth={maxDob}
+          />
+        </PopoverContent>
+      </Popover>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 export function PatientDetailsStep({ data, update, next }: StepProps) {
   const patient = data.patient ?? emptyPatient;
   const [errors, setErrors] = useState<PatientFieldErrors>({});
@@ -89,17 +139,13 @@ export function PatientDetailsStep({ data, update, next }: StepProps) {
     if (Object.keys(fieldErrors).length === 0) next();
   };
 
-  const rebateNote = errors.medicareNumber === "Enter at least one identifier to claim a Medicare rebate."
-    ? errors.medicareNumber
-    : "Enter at least one identifier to claim a Medicare rebate where eligible.";
-  const rebateIsError = errors.medicareNumber === "Enter at least one identifier to claim a Medicare rebate.";
 
   return (
     <div className="space-y-6 py-15">
       <div className="text-center space-y-1.5">
         <h1 className="text-4xl font-bold text-[#6E78FF] text-balance">A few details about you.</h1>
         <p className="text-sm text-muted-foreground">Your information is encrypted and only used for your care.</p>
-        <SlotHeldTimer />
+        <p className="text-sm text-[#6E78FF]/70">Your selected slot is available — complete the form to secure it.</p>
       </div>
 
       <div className="mt-10 rounded-2xl bg-white p-10 shadow-sm space-y-8">
@@ -111,7 +157,7 @@ export function PatientDetailsStep({ data, update, next }: StepProps) {
             <TextField label="Last Name*" value={patient.lastName} placeholder="Last name" error={errors.lastName} onChange={(v) => setField("lastName", v)} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <TextField label="Date of Birth*" value={patient.dob} placeholder="DD/MM/YYYY" error={errors.dob} onChange={(v) => setField("dob", v)} />
+            <DOBField value={patient.dob} error={errors.dob} onChange={(v) => setField("dob", v)} />
             <SelectField label="Gender*" value={patient.gender} placeholder="Gender" options={GENDERS} error={errors.gender} onChange={(v) => setField("gender", v)} />
           </div>
         </div>
@@ -154,12 +200,12 @@ export function PatientDetailsStep({ data, update, next }: StepProps) {
 
         <div className="space-y-4">
           <p className="text-sm font-semibold">Medicare (for rebates)</p>
-          <div className={`rounded-lg px-4 py-3 text-sm ${rebateIsError ? "bg-amber-50 text-amber-700" : "bg-[#6E78FF]/10 text-[#6E78FF]"}`}>
-            {rebateNote}
+          <div className="rounded-lg px-4 py-3 text-sm bg-[#6E78FF]/10 text-[#6E78FF]">
+            Enter at least one identifier to claim a Medicare rebate where eligible.
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <TextField label="Medicare Number + IRN" value={patient.medicareNumber} placeholder="Medicare number" error={rebateIsError ? undefined : errors.medicareNumber} onChange={(v) => setField("medicareNumber", v)} />
+              <TextField label="Medicare Number + IRN" value={patient.medicareNumber} placeholder="Medicare number" error={errors.medicareNumber} onChange={(v) => setField("medicareNumber", v)} />
               <p className="text-xs text-muted-foreground">10 digits + 1 IRN digit (11 total).</p>
             </div>
             <div className="space-y-1.5">

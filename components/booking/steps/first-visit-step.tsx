@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import type { VisitType, StepProps } from "@/lib/booking/types";
-import { durationConfig } from "@/lib/booking/duration-config";
+import { firstVisitDurationHint } from "@/lib/booking/duration-config";
 
 const options: { value: VisitType; label: string; desc: string }[] = [
   { value: "initial", label: "Initial consultation", desc: "First time with us. A more detailed session." },
@@ -9,13 +9,11 @@ const options: { value: VisitType; label: string; desc: string }[] = [
 ];
 
 export function FirstVisitStep({ data, update, next, back }: StepProps) {
-  const durations = data.service ? durationConfig[data.service] : null;
+  const hints = data.service ? firstVisitDurationHint[data.service] : null;
 
   const handleSelect = (visitType: VisitType) => {
-    update({
-      visitType,
-      duration: data.service ? durationConfig[data.service][visitType] : null,
-    });
+    // Duration will be set properly in consultation-mode step; clear it on visit type change
+    update({ visitType, duration: null });
   };
 
   return (
@@ -39,9 +37,9 @@ export function FirstVisitStep({ data, update, next, back }: StepProps) {
               <span className="block font-semibold text-[#6E78FF]">{opt.label}</span>
               <span className="block text-sm text-muted-foreground">{opt.desc}</span>
             </span>
-            {durations && (
+            {hints?.[opt.value] != null && (
               <span className="flex-shrink-0 rounded-full bg-[#6E78FF]/10 px-3 py-1 text-sm font-medium text-[#6E78FF]">
-                {durations[opt.value]} min
+                {hints[opt.value]} min
               </span>
             )}
           </button>

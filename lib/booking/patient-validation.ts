@@ -44,10 +44,6 @@ export const patientSchema = z
       .string()
       .transform((v) => v.replace(/\s/g, ""))
       .refine((v) => v === "" || /^\d{16}$/.test(v), "IHI must be 16 digits."),
-  })
-  .refine((data) => data.medicareNumber !== "" || data.ihiNumber !== "", {
-    message: "Enter at least one identifier to claim a Medicare rebate.",
-    path: ["medicareNumber"],
   });
 
 export type PatientFieldErrors = Partial<Record<keyof z.infer<typeof patientSchema>, string>>;

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { verifyWebhookSignature, handlePaymentSucceeded, handlePaymentFailed } from '@/lib/stripe/webhook'
+import { verifyWebhookSignature, handleCheckoutCompleted, handleCheckoutExpired } from '@/lib/stripe/webhook'
 
 export async function POST(req: NextRequest) {
   const payload = await req.text()
@@ -18,17 +18,15 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
-      case 'payment_intent.succeeded':
-        await handlePaymentSucceeded(event.data.object)
+      case 'checkout.session.completed':
+        await handleCheckoutCompleted(event.data.object)
         break
-      case 'payment_intent.payment_failed':
-        await handlePaymentFailed(event.data.object)
+      case 'checkout.session.expired':
+        await handleCheckoutExpired(event.data.object)
         break
-      // Other events silently acknowledged
     }
   } catch (err) {
     console.error('[Webhook] Handler error:', err)
-    // Return 500 so Stripe retries
     return NextResponse.json({ error: 'Handler failed' }, { status: 500 })
   }
 

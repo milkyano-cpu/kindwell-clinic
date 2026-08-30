@@ -1,7 +1,12 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BookingData, ConsultationMode, ServiceType, StepId } from "@/lib/booking/types";
 import { getSteps } from "@/lib/booking/steps-config";
+
+const STORAGE_KEY = "kindwell-booking";
+
+// Never restore into these steps — slot lock must always run fresh
+const NO_RESTORE = new Set<StepId>(["confirm-payment", "confirmed"]);
 
 const initialData: BookingData = {
   service: null, visitType: null, suitability: null, consultationMode: null, duration: null,
@@ -13,7 +18,20 @@ interface Preset {
   consultationMode?: ConsultationMode;
 }
 
+function readSession(): { data: BookingData; stepIndex: number } | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function useBookingFlow(preset?: Preset) {
+  const [hydrated, setHydrated] = useState(false);
+
+  // Always start from the default on both server and client (avoids hydration mismatch)
   const [data, setData] = useState<BookingData>(() => ({
     ...initialData,
     ...(preset?.service ? { service: preset.service } : {}),
@@ -33,9 +51,39 @@ export function useBookingFlow(preset?: Preset) {
 
   const currentStep = steps[stepIndex];
 
+  // Restore saved session after hydration (safe — runs client-only)
+  useEffect(() => {
+    const saved = readSession();
+    if (saved) {
+      const savedSteps = getSteps(saved.data.visitType ?? "initial");
+      const savedStep = savedSteps[saved.stepIndex];
+
+      let targetIndex = saved.stepIndex;
+      if (!savedStep || NO_RESTORE.has(savedStep)) {
+        const confirmIdx = savedSteps.findIndex((s) => s === "confirm-payment");
+        targetIndex = Math.max(0, confirmIdx > 0 ? confirmIdx - 1 : 0);
+      }
+
+      setData(saved.data);
+      setStepIndex(targetIndex);
+    }
+    setHydrated(true);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist on every change, clear when entering no-restore zone
+  useEffect(() => {
+    if (NO_RESTORE.has(currentStep)) {
+      sessionStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ data, stepIndex }));
+    } catch {}
+  }, [data, stepIndex, currentStep]);
+
   const update = (patch: Partial<BookingData>) => setData((prev) => ({ ...prev, ...patch }));
   const next = () => setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   const back = () => setStepIndex((i) => Math.max(i - 1, 0));
 
-  return { data, update, steps, stepIndex, currentStep, next, back };
+  return { data, update, steps, stepIndex, currentStep, next, back, hydrated };
 }

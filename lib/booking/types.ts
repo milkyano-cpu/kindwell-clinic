@@ -21,8 +21,8 @@ export interface BookingData {
   visitType: VisitType | null;
   suitability: SuitabilityAnswers | null;
   consultationMode: ConsultationMode | null;
-  duration: 5 | 10 | 20 | null;
-  slot: { date: string; time: string } | null;
+  duration: 5 | 10 | 15 | 20 | null;
+  slot: string | null; // "YYYY-MM-DDTHH:MM" — full ISO schedule time
   patient: PatientDetails | null;
   referringGP: ReferringGP | null;
   questionnaire: Record<string, string | boolean> | null;

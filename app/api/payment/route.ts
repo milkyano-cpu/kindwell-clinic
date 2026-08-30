@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withACL } from '@/lib/acl/with-acl'
-import { createBookingPaymentIntent } from '@/lib/stripe/payment'
+import { createBookingCheckoutSession } from '@/lib/stripe/payment'
 import { logger } from '@/lib/logger'
 
 const schema = z.object({
@@ -10,42 +10,28 @@ const schema = z.object({
   appointmentType: z.enum(['initial', 'follow-up']),
   serviceCategory: z.enum(['alternative-medicine', 'smoking-cessation']),
   scheduleTime: z.string(),
-  patient: z.object({
-    firstName: z.string().nullable(),
-    lastName: z.string().min(1),
-    dob: z.string(),
-    gender: z.string(),
-    email: z.string().optional().transform(v => v ?? ''),
-    mobilePhone: z.string().optional().transform(v => v ?? ''),
-  }),
 })
 
 export const POST = withACL(
   async (_, body: z.infer<typeof schema>) => {
-    const intent = await createBookingPaymentIntent({
+    const session = await createBookingCheckoutSession({
       appointmentId: body.appointmentId,
       consultationMode: body.consultationMode,
       appointmentType: body.appointmentType,
       serviceCategory: body.serviceCategory,
       scheduleTime: body.scheduleTime,
-      patientFirstName: body.patient.firstName ?? '',
-      patientLastName: body.patient.lastName,
-      patientDob: body.patient.dob,
-      patientGender: body.patient.gender,
-      patientEmail: body.patient.email,
-      patientMobile: body.patient.mobilePhone,
     })
 
     await logger.log({
       event: 'booking.payment_initiated',
       appointmentId: body.appointmentId,
-      stripePaymentIntentId: intent.id,
+      stripePaymentIntentId: (session.payment_intent as string) ?? session.id,
       consultationMode: body.consultationMode,
       serviceCategory: body.serviceCategory,
       scheduleTime: body.scheduleTime,
     })
 
-    return NextResponse.json({ clientSecret: intent.client_secret })
+    return NextResponse.json({ url: session.url })
   },
   {
     schema,

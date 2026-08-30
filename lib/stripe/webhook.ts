@@ -1,55 +1,39 @@
 import type Stripe from 'stripe'
 import { stripe } from './client'
-import { createPatient } from '@/lib/medirecords/patients'
 import { updateAppointment, deleteAppointment } from '@/lib/medirecords/appointments'
 import { logger } from '@/lib/logger'
-
-const PRACTICE_ID = process.env.MEDIRECORDS_PRACTICE_ID!
-const DEFAULT_PROVIDER_ID = process.env.MEDIRECORDS_PROVIDER_ID!
 
 export function verifyWebhookSignature(payload: string, signature: string): Stripe.Event {
   return stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!)
 }
 
-export async function handlePaymentSucceeded(intent: Stripe.PaymentIntent): Promise<void> {
-  const meta = intent.metadata
-  const { appointmentId } = meta
+export async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  if (session.payment_status !== 'paid') return
 
-  const patient = await createPatient({
-    defaultPracticeId: PRACTICE_ID,
-    usualDoctorId: DEFAULT_PROVIDER_ID,
-    firstName: meta.patientFirstName || null,
-    lastName: meta.patientLastName,
-    gender: parseInt(meta.patientGender),
-    dob: meta.patientDob,
-    patientStatusCode: 1,
-    mobilePhone: meta.patientMobile || null,
-    email: meta.patientEmail || null,
-  })
+  const { appointmentId, serviceCategory, consultationMode, scheduleTime } = session.metadata ?? {}
+  if (!appointmentId) return
 
-  await updateAppointment(appointmentId, {
-    patientId: patient.id,
-    appointmentStatus: 3,
-  })
+  await updateAppointment(appointmentId, { appointmentStatus: 3 })
 
   await logger.log({
     event: 'booking.confirmed',
     appointmentId,
-    stripePaymentIntentId: intent.id,
-    serviceCategory: meta.serviceCategory,
-    consultationMode: meta.consultationMode,
-    scheduleTime: meta.scheduleTime,
+    stripePaymentIntentId: (session.payment_intent as string) ?? session.id,
+    serviceCategory: serviceCategory ?? '',
+    consultationMode: consultationMode ?? '',
+    scheduleTime: scheduleTime ?? '',
   })
 }
 
-export async function handlePaymentFailed(intent: Stripe.PaymentIntent): Promise<void> {
-  const { appointmentId } = intent.metadata
+export async function handleCheckoutExpired(session: Stripe.Checkout.Session): Promise<void> {
+  const { appointmentId } = session.metadata ?? {}
+  if (!appointmentId) return
 
   await deleteAppointment(appointmentId)
 
   await logger.log({
     event: 'booking.payment_failed',
     appointmentId,
-    stripePaymentIntentId: intent.id,
+    stripePaymentIntentId: (session.payment_intent as string) ?? session.id,
   })
 }
