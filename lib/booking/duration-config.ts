@@ -25,6 +25,6 @@ export function getDuration(
 
 // For first-visit step badge — before mode is known, show null if variable by mode
 export const firstVisitDurationHint: Record<ServiceType, Record<VisitType, number | null>> = {
-  "alternative-medicine": { initial: null, "follow-up": 10 },
+  "alternative-medicine": { initial: 20, "follow-up": 10 },
   "smoking-cessation": { initial: 15, "follow-up": 10 },
 };
