@@ -5,10 +5,13 @@ type LimiterKey = 'default' | 'booking' | 'payment'
 
 let limiters: Record<LimiterKey, Ratelimit> | null = null
 
-if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+const REDIS_URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
+const REDIS_TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
+
+if (REDIS_URL && REDIS_TOKEN) {
   const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    url: REDIS_URL,
+    token: REDIS_TOKEN,
   })
   limiters = {
     default: new Ratelimit({ redis, limiter: Ratelimit.fixedWindow(30, '60s'), prefix: 'rl:default' }),
