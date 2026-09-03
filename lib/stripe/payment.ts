@@ -1,7 +1,21 @@
 import { stripe } from './client'
-import { getFeeSchedule, type ConsultationMode, type AppointmentType, type ServiceCategory } from './fee'
+import type { ConsultationMode, AppointmentType, ServiceCategory } from './fee'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
+function resolvePriceId(
+  mode: ConsultationMode,
+  type: AppointmentType,
+  service: ServiceCategory,
+): string {
+  const svc = service === 'alternative-medicine' ? 'ALT_MED' : 'SMOKING'
+  const t = type === 'initial' ? 'INITIAL' : 'FOLLOWUP'
+  const m = mode === 'telehealth' ? 'TELEHEALTH' : 'F2F'
+  const key = `STRIPE_PRICE_${svc}_${t}_${m}`
+  const val = process.env[key]
+  if (!val) throw new Error(`Missing env: ${key}`)
+  return val
+}
 
 export interface BookingCheckoutParams {
   appointmentId: string
@@ -12,28 +26,11 @@ export interface BookingCheckoutParams {
 }
 
 export async function createBookingCheckoutSession(params: BookingCheckoutParams) {
-  const fee = getFeeSchedule(params.consultationMode, params.appointmentType, params.serviceCategory)
-
-  const modeLabel = params.consultationMode === 'telehealth' ? 'Telehealth' : 'In-person'
-  const typeLabel = params.appointmentType === 'initial' ? 'Initial' : 'Follow-up'
-  const serviceLabel =
-    params.serviceCategory === 'alternative-medicine' ? 'Alternative Medicine' : 'Smoking Cessation'
+  const priceId = resolvePriceId(params.consultationMode, params.appointmentType, params.serviceCategory)
 
   return stripe.checkout.sessions.create({
     mode: 'payment',
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: 'aud',
-          unit_amount: fee.outOfPocketCents,
-          product_data: {
-            name: `${serviceLabel} — ${typeLabel} (${modeLabel})`,
-            description: `${fee.durationMinutes}-minute appointment on ${params.scheduleTime.slice(0, 10)}`,
-          },
-        },
-      },
-    ],
+    line_items: [{ price: priceId, quantity: 1 }],
     metadata: {
       appointmentId: params.appointmentId,
       consultationMode: params.consultationMode,

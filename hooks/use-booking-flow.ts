@@ -71,7 +71,9 @@ export function useBookingFlow(preset?: Preset) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist on every change, clear when entering no-restore zone
+  // hydrated omitted from deps intentionally — one-time guard, not a trigger
   useEffect(() => {
+    if (!hydrated) return;
     if (NO_RESTORE.has(currentStep)) {
       sessionStorage.removeItem(STORAGE_KEY);
       return;
@@ -79,7 +81,7 @@ export function useBookingFlow(preset?: Preset) {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ data, stepIndex }));
     } catch {}
-  }, [data, stepIndex, currentStep]);
+  }, [data, stepIndex, currentStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (patch: Partial<BookingData>) => setData((prev) => ({ ...prev, ...patch }));
   const next = () => setStepIndex((i) => Math.min(i + 1, steps.length - 1));

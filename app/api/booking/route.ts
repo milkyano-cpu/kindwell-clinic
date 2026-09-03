@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withACL } from '@/lib/acl/with-acl'
-import { createPatient } from '@/lib/medirecords/patients'
+import { createPatient, createPatientAddress } from '@/lib/medirecords/patients'
 import { createAppointment } from '@/lib/medirecords/appointments'
 import { getFeeSchedule } from '@/lib/stripe/fee'
 import { logger } from '@/lib/logger'
 
 const PRACTICE_ID = process.env.MEDIRECORDS_PRACTICE_ID!
 const DEFAULT_PROVIDER_ID = process.env.MEDIRECORDS_PROVIDER_ID || undefined
+
+// GET /v1/code-system/title-code
+const TITLE_CODES: Record<string, number> = {
+  Mr: 315890000,
+  Mrs: 315890001,
+  Ms: 315890002,
+  Miss: 315890003,
+  Dr: 315890004,
+  Prof: 315890005,
+  Mx: 315890012,
+}
 
 function resolveAppointmentTypeId(
   mode: 'telehealth' | 'face-to-face',
@@ -46,13 +57,19 @@ const schema = z.object({
   appointmentType: z.enum(['initial', 'follow-up']),
   serviceCategory: z.enum(['alternative-medicine', 'smoking-cessation']),
   duration: z.number().int().optional(),
+  notes: z.string().optional(),
   patient: z.object({
+    title: z.string().min(1),
     firstName: z.string().min(1).nullable(),
     lastName: z.string().min(1),
     dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     gender: z.number().int().min(1).max(3),
     email: z.string().email().optional().or(z.literal('')),
     mobilePhone: z.string().optional(),
+    address1: z.string().min(1),
+    suburb: z.string().min(1),
+    state: z.string().min(1),
+    postcode: z.string().regex(/^\d{4}$/),
   }),
 })
 
@@ -64,6 +81,7 @@ export const POST = withACL(
     const patient = await createPatient({
       defaultPracticeId: PRACTICE_ID,
       usualDoctorId: DEFAULT_PROVIDER_ID,
+      titleCode: TITLE_CODES[body.patient.title],
       firstName: body.patient.firstName,
       lastName: body.patient.lastName,
       gender: body.patient.gender,
@@ -71,6 +89,16 @@ export const POST = withACL(
       patientStatusCode: 1,
       email: body.patient.email || null,
       mobilePhone: body.patient.mobilePhone || null,
+      contactMethod: 1,
+    })
+
+    await createPatientAddress(patient.id, {
+      addressType: 1,
+      addressLine1: body.patient.address1,
+      cityCode: body.patient.suburb,
+      postcode: body.patient.postcode,
+      stateCode: body.patient.state,
+      countryCode: 'AU',
     })
 
     const appointment = await createAppointment({
@@ -80,6 +108,8 @@ export const POST = withACL(
       appointmentStatus: 2,
       appointmentIntervalCode: fee.intervalCode,
       providerId: DEFAULT_PROVIDER_ID,
+      notes: body.notes ?? null,
+      allowDoubleBookingForPatient: false,
       emailReminder: true,
       reminderMethod: 1,
       reminderType: 7,

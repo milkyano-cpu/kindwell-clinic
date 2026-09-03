@@ -51,6 +51,13 @@ export function ConfirmPaymentStep({ data, back }: StepProps) {
     const { patient } = data;
 
     const run = async () => {
+      const suitabilityNotes = data.suitability
+        ? Object.entries(data.suitability)
+            .filter(([, v]) => v !== false && v !== "")
+            .map(([k, v]) => `${k}: ${v === true ? "Yes" : v}`)
+            .join("\n")
+        : undefined;
+
       const bookingRes = await fetch("/api/booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -60,13 +67,19 @@ export function ConfirmPaymentStep({ data, back }: StepProps) {
           appointmentType: data.visitType,
           serviceCategory: data.service,
           ...(data.duration ? { duration: data.duration } : {}),
+          ...(suitabilityNotes ? { notes: suitabilityNotes } : {}),
           patient: {
+            title: patient.title,
             firstName: patient.firstName,
             lastName: patient.lastName,
             dob: dobToISO(patient.dob),
             gender: mapGender(patient.gender),
             email: patient.email,
             mobilePhone: patient.mobile,
+            address1: patient.address1,
+            suburb: patient.suburb,
+            state: patient.state,
+            postcode: patient.postcode,
           },
         }),
       });

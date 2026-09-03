@@ -26,7 +26,7 @@ function toDateStr(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
-export function DateTimeStep({ data, update, next }: StepProps) {
+export function DateTimeStep({ data, update, next, back }: StepProps) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(
     data.slot ? new Date(data.slot.slice(0, 10)) : undefined
@@ -168,7 +168,7 @@ export function DateTimeStep({ data, update, next }: StepProps) {
         </div>
       )}
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3">
         <Button
           disabled={!data.slot}
           onClick={next}
@@ -176,6 +176,12 @@ export function DateTimeStep({ data, update, next }: StepProps) {
         >
           Continue
         </Button>
+        <button
+          onClick={back}
+          className="cursor-pointer text-xs font-semibold tracking-wide text-foreground underline underline-offset-4 transition-colors hover:text-[#6E78FF]"
+        >
+          BACK
+        </button>
       </div>
     </div>
   );

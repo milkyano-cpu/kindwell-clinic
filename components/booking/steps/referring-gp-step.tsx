@@ -4,7 +4,7 @@ import type { ReferringGP, StepProps } from "@/lib/booking/types";
 
 const emptyGP: ReferringGP = { hasReferrer: null, name: "", email: "" };
 
-export function ReferringGPStep({ data, update, next }: StepProps) {
+export function ReferringGPStep({ data, update, next, back }: StepProps) {
   const gp = data.referringGP ?? emptyGP;
   const setField = (patch: Partial<ReferringGP>) => update({ referringGP: { ...gp, ...patch } });
 
@@ -79,7 +79,7 @@ export function ReferringGPStep({ data, update, next }: StepProps) {
         </button>
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3">
         <Button
           disabled={!isComplete}
           onClick={next}
@@ -87,6 +87,12 @@ export function ReferringGPStep({ data, update, next }: StepProps) {
         >
           Continue
         </Button>
+        <button
+          onClick={back}
+          className="cursor-pointer text-xs font-semibold tracking-wide text-foreground underline underline-offset-4 transition-colors hover:text-[#6E78FF]"
+        >
+          BACK
+        </button>
       </div>
     </div>
   );

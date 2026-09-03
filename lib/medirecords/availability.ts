@@ -2,6 +2,15 @@ import { getAppointments } from './appointments'
 
 const PRACTICE_START_HOUR = parseInt(process.env.PRACTICE_START_HOUR ?? '8')
 const PRACTICE_END_HOUR = parseInt(process.env.PRACTICE_END_HOUR ?? '18')
+const PRACTICE_TIMEZONE = process.env.PRACTICE_TIMEZONE ?? 'Australia/Sydney'
+
+// Returns "YYYY-MM-DDTHH:MM" in practice local time
+function getPracticeNow(): string {
+  return new Date()
+    .toLocaleString('sv-SE', { timeZone: PRACTICE_TIMEZONE })
+    .replace(' ', 'T')
+    .slice(0, 16)
+}
 
 function generateSlots(date: string, durationMinutes: number): string[] {
   const slots: string[] = []
@@ -41,7 +50,14 @@ export async function getAvailableSlots(opts: {
   })
 
   const bookedTimes = toBookedSet(booked)
-  return generateSlots(opts.date, opts.durationMinutes).filter(slot => !bookedTimes.has(slot))
+  const practiceNow = getPracticeNow()
+  const todayStr = practiceNow.slice(0, 10)
+
+  return generateSlots(opts.date, opts.durationMinutes).filter(slot => {
+    if (bookedTimes.has(slot)) return false
+    if (opts.date === todayStr && slot <= practiceNow) return false
+    return true
+  })
 }
 
 export async function getAvailableDatesForMonth(opts: {
@@ -62,17 +78,20 @@ export async function getAvailableDatesForMonth(opts: {
 
   const bookedTimes = toBookedSet(booked)
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const practiceNow = getPracticeNow()
+  const todayStr = practiceNow.slice(0, 10)
 
   const availableDates: string[] = []
 
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month - 1, day)
-    if (date < today) continue
-
     const dateStr = `${year}-${monthStr}-${pad2(day)}`
-    const hasSlot = generateSlots(dateStr, durationMinutes).some(s => !bookedTimes.has(s))
+    if (dateStr < todayStr) continue
+
+    const hasSlot = generateSlots(dateStr, durationMinutes).some(s => {
+      if (bookedTimes.has(s)) return false
+      if (dateStr === todayStr && s <= practiceNow) return false
+      return true
+    })
     if (hasSlot) availableDates.push(dateStr)
   }
 

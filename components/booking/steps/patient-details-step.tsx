@@ -14,7 +14,7 @@ const emptyPatient: PatientDetails = {
   medicareNumber: "", ihiNumber: "",
 };
 
-const TITLES = ["Mr", "Mrs", "Ms", "Miss", "Dr", "Other"];
+const TITLES = ["Mr", "Mrs", "Ms", "Miss", "Dr", "Prof", "Mx"];
 const GENDERS = ["Male", "Female"];
 const STATES = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"];
 
@@ -121,7 +121,7 @@ function DOBField({ value, error, onChange }: { value: string; error?: string; o
   );
 }
 
-export function PatientDetailsStep({ data, update, next }: StepProps) {
+export function PatientDetailsStep({ data, update, next, back }: StepProps) {
   const patient = data.patient ?? emptyPatient;
   const [errors, setErrors] = useState<PatientFieldErrors>({});
   const [touched, setTouched] = useState(false);
@@ -216,10 +216,16 @@ export function PatientDetailsStep({ data, update, next }: StepProps) {
         </div>
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3">
         <Button onClick={handleContinue} className="w-full max-w-xs py-6 text-base bg-[#6E78FF] hover:bg-[#6E78FF]/90">
           Continue
         </Button>
+        <button
+          onClick={back}
+          className="cursor-pointer text-xs font-semibold tracking-wide text-foreground underline underline-offset-4 transition-colors hover:text-[#6E78FF]"
+        >
+          BACK
+        </button>
       </div>
     </div>
   );

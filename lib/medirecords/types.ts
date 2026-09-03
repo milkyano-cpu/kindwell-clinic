@@ -70,6 +70,7 @@ export interface MRPatientCreate {
   mobilePhone?: string | null
   homePhone?: string | null
   email?: string | null
+  contactMethod?: number | null
   notes?: string | null
 }
 

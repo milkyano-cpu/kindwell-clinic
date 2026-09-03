@@ -85,7 +85,7 @@ function SectionCard({ section, answers, onToggle, onTextChange }: {
   );
 }
 
-export function QuestionnaireStep({ data, update, next }: StepProps) {
+export function QuestionnaireStep({ data, update, next, back }: StepProps) {
   const sections = data.service ? questionnaireConfig[data.service] : [];
   const answers = data.questionnaire ?? {};
 
@@ -111,10 +111,16 @@ export function QuestionnaireStep({ data, update, next }: StepProps) {
         <SectionCard key={section.title} section={section} answers={answers} onToggle={toggle} onTextChange={setText} />
       ))}
 
-      <div className="flex justify-center pt-2">
+      <div className="flex flex-col items-center gap-3 pt-2">
         <Button disabled={!isComplete} onClick={next} className="w-full max-w-xs py-6 text-base bg-[#6E78FF] hover:bg-[#6E78FF]/90">
           Continue
         </Button>
+        <button
+          onClick={back}
+          className="cursor-pointer text-xs font-semibold tracking-wide text-foreground underline underline-offset-4 transition-colors hover:text-[#6E78FF]"
+        >
+          BACK
+        </button>
       </div>
     </div>
   );
