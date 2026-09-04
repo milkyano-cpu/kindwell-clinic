@@ -29,6 +29,12 @@ export async function createAppointment(data: MRAppointmentCreate): Promise<MRAp
   return mrClient.post<MRAppointment>(`/v1/practices/${PRACTICE_ID}/appointments`, data)
 }
 
+export async function getAppointmentById(appointmentId: string): Promise<MRAppointment> {
+  return mrClient.get<MRAppointment>(
+    `/v1/practices/${PRACTICE_ID}/appointments/${appointmentId}`,
+  )
+}
+
 export async function updateAppointment(
   appointmentId: string,
   data: Partial<MRAppointmentCreate>,

@@ -1,6 +1,6 @@
 import type Stripe from 'stripe'
 import { stripe } from './client'
-import { updateAppointment, deleteAppointment } from '@/lib/medirecords/appointments'
+import { getAppointmentById, updateAppointment, deleteAppointment } from '@/lib/medirecords/appointments'
 import { logger } from '@/lib/logger'
 
 export function verifyWebhookSignature(payload: string, signature: string): Stripe.Event {
@@ -13,7 +13,24 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
   const { appointmentId, serviceCategory, consultationMode, scheduleTime } = session.metadata ?? {}
   if (!appointmentId) return
 
-  await updateAppointment(appointmentId, { appointmentStatus: 3 })
+  const existing = await getAppointmentById(appointmentId)
+
+  await updateAppointment(appointmentId, {
+    patientId: existing.patientId,
+    appointmentTypeId: existing.appointmentTypeId,
+    scheduleTime: existing.scheduleTime,
+    appointmentStatus: 3,
+    appointmentIntervalCode: existing.appointmentIntervalCode,
+    providerId: existing.providerId,
+    roomId: existing.roomId,
+    notes: existing.notes,
+    walkIn: existing.walkIn,
+    firstAvailableDoctor: existing.firstAvailableDoctor,
+    urgency: existing.urgency,
+    emailReminder: existing.emailReminder,
+    reminderMethod: existing.reminderMethod,
+    reminderType: existing.reminderType,
+  })
 
   await logger.log({
     event: 'booking.confirmed',
