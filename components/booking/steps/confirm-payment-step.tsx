@@ -6,8 +6,8 @@ import { pricingConfig, serviceLabel, visitTypeLabel, modeLabel, formatCurrency 
 import { RELATIONSHIP_CODE_BY_LABEL } from "@/lib/booking/relationships";
 
 function mapGender(gender: string): number {
-  if (gender === "Male") return 1;
-  if (gender === "Female") return 2;
+  if (gender === "Female") return 1;
+  if (gender === "Male") return 2;
   return 3;
 }
 
