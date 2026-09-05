@@ -16,6 +16,17 @@ function dobToISO(dob: string): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function formatSlot(slot: string): string {
+  const [datePart, timePart] = slot.split("T");
+  const date = new Date(`${datePart}T12:00:00`);
+  const [hStr, mStr] = timePart.split(":");
+  const h = parseInt(hStr);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  const dateLabel = date.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return `${dateLabel} at ${h12}:${mStr} ${period}`;
+}
+
 function useExpiryTimer(expiresAt: string | null) {
   const [seconds, setSeconds] = useState<number | null>(null);
   useEffect(() => {
@@ -138,15 +149,16 @@ export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
   if (!data.service || !data.visitType || !data.consultationMode) return null;
 
   const fee = pricingConfig[data.consultationMode][data.service][data.visitType];
-  const duration = data.duration ?? 0;
+  const duration = data.duration ?? fee.durationMinutes;
   const m = seconds != null ? Math.floor(seconds / 60) : "--";
   const s = seconds != null ? String(seconds % 60).padStart(2, "0") : "--";
+  const patient = data.patient;
 
   return (
     <div className="space-y-6 text-center">
       <div className="space-y-1.5">
         <h1 className="text-4xl font-bold text-[#6E78FF] text-balance">Confirm and pay.</h1>
-        <p className="text-sm text-muted-foreground">Here's your fee breakdown, including any Medicare rebate.</p>
+        <p className="text-sm text-muted-foreground">Review your booking details before paying.</p>
         {loading ? (
           <p className="inline-block rounded-full bg-gray-50 px-6 py-3 text-lg font-medium text-gray-400">
             Securing your slot…
@@ -166,31 +178,59 @@ export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
         )}
       </div>
 
-      <div className="rounded-2xl bg-white p-8 shadow-sm text-left space-y-1">
-        <p className="text-lg font-bold text-[#6E78FF] mb-4">Order summary</p>
-
-        <div className="flex justify-between py-2.5 border-b text-sm">
-          <span>
-            {serviceLabel[data.service]} · {visitTypeLabel[data.visitType]} ({duration} min)
-          </span>
-          <span className="font-medium">{formatCurrency(fee.gross)}</span>
+      <div className="rounded-2xl bg-white p-8 shadow-sm text-left space-y-5">
+        {/* Booking details */}
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-[#6E78FF]">Appointment</p>
+          <div className="space-y-2 text-sm">
+            {data.slot && (
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground shrink-0">Date & time</span>
+                <span className="font-medium text-right">{formatSlot(data.slot)}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground shrink-0">Service</span>
+              <span className="font-medium text-right">
+                {serviceLabel[data.service]} · {visitTypeLabel[data.visitType]} ({duration} min)
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground shrink-0">Mode</span>
+              <span className="font-medium">{modeLabel[data.consultationMode]}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground shrink-0">Doctor</span>
+              <span className="font-medium">{data.providerName ?? "No preferred doctor"}</span>
+            </div>
+            {patient && (
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground shrink-0">Patient</span>
+                <span className="font-medium">{patient.firstName} {patient.lastName}</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="flex justify-between py-2.5 border-b text-sm">
-          <span>{modeLabel[data.consultationMode]}</span>
-          <span className="text-muted-foreground">—</span>
-        </div>
+        <hr className="border-gray-100" />
 
-        <div className="flex justify-between py-2.5 border-b text-sm">
-          <span>Medicare rebate</span>
-          <span className={fee.rebate > 0 ? "text-green-600" : "text-muted-foreground"}>
-            {fee.rebate > 0 ? `− ${formatCurrency(fee.rebate)}` : "N/A"}
-          </span>
-        </div>
-
-        <div className="flex justify-between pt-3 font-bold">
-          <span>Total due today</span>
-          <span>{formatCurrency(fee.net)}</span>
+        {/* Fee breakdown */}
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-[#6E78FF] mb-3">Fee breakdown</p>
+          <div className="flex justify-between py-2 border-b text-sm">
+            <span>Consultation fee</span>
+            <span className="font-medium">{formatCurrency(fee.gross)}</span>
+          </div>
+          <div className="flex justify-between py-2 border-b text-sm">
+            <span>Medicare rebate</span>
+            <span className={fee.rebate > 0 ? "text-green-600" : "text-muted-foreground"}>
+              {fee.rebate > 0 ? `− ${formatCurrency(fee.rebate)}` : "N/A"}
+            </span>
+          </div>
+          <div className="flex justify-between pt-3 font-bold">
+            <span>Total due today</span>
+            <span>{formatCurrency(fee.net)}</span>
+          </div>
         </div>
 
         <Button

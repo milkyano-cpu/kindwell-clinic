@@ -52,10 +52,11 @@ export function DateTimeStep({ data, update, next, back }: StepProps) {
     const year = viewMonth.getFullYear();
     const month = viewMonth.getMonth() + 1;
     const durationParam = data.duration ? `&duration=${data.duration}` : "";
+    const providerParam = data.providerId ? `&providerId=${data.providerId}` : "";
 
     setLoadingDates(true);
     fetch(
-      `/api/availability?year=${year}&month=${month}&mode=${data.consultationMode}&type=${data.visitType}&service=${data.service}${durationParam}`
+      `/api/availability?year=${year}&month=${month}&mode=${data.consultationMode}&type=${data.visitType}&service=${data.service}${durationParam}${providerParam}`
     )
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((json) => setAvailableDates(json.availableDates ?? []))
@@ -71,10 +72,11 @@ export function DateTimeStep({ data, update, next, back }: StepProps) {
     }
     const dateStr = toDateStr(date);
     const durationParam = data.duration ? `&duration=${data.duration}` : "";
+    const providerParam = data.providerId ? `&providerId=${data.providerId}` : "";
     setLoadingSlots(true);
     setSlotsError(null);
     fetch(
-      `/api/slots?date=${dateStr}&mode=${data.consultationMode}&type=${data.visitType}&service=${data.service}${durationParam}`
+      `/api/slots?date=${dateStr}&mode=${data.consultationMode}&type=${data.visitType}&service=${data.service}${durationParam}${providerParam}`
     )
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((json) => setSlots(json.slots ?? []))
