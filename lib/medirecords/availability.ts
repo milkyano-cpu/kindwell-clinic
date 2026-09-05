@@ -42,7 +42,7 @@ export async function getAvailableSlots(opts: {
   date: string
   durationMinutes: number
   providerId?: string
-}): Promise<string[]> {
+}): Promise<{ time: string; available: boolean }[]> {
   const booked = await getAppointments({
     appointmentDateRangeStart: `${opts.date}T00:00`,
     appointmentDateRangeEnd: `${opts.date}T23:59`,
@@ -53,11 +53,10 @@ export async function getAvailableSlots(opts: {
   const practiceNow = getPracticeNow()
   const todayStr = practiceNow.slice(0, 10)
 
-  return generateSlots(opts.date, opts.durationMinutes).filter(slot => {
-    if (bookedTimes.has(slot)) return false
-    if (opts.date === todayStr && slot <= practiceNow) return false
-    return true
-  })
+  return generateSlots(opts.date, opts.durationMinutes).map(slot => ({
+    time: slot,
+    available: !bookedTimes.has(slot) && !(opts.date === todayStr && slot <= practiceNow),
+  }))
 }
 
 export async function getAvailableDatesForMonth(opts: {

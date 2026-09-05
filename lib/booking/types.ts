@@ -4,7 +4,7 @@ export type ConsultationMode = "telehealth" | "face-to-face";
 
 export type StepId =
   | "service" | "first-visit" | "suitability"
-  | "consultation-mode" | "date-time"
+  | "consultation-mode" | "provider" | "date-time"
   | "patient-details" | "referring-gp" | "questionnaire"
   | "confirm-payment" | "confirmed";
 
@@ -22,7 +22,10 @@ export interface BookingData {
   suitability: SuitabilityAnswers | null;
   consultationMode: ConsultationMode | null;
   duration: 5 | 10 | 15 | 20 | null;
+  providerId: string | null;
+  providerName: string | null;
   slot: string | null; // "YYYY-MM-DDTHH:MM" — full ISO schedule time
+  appointmentId: string | null;
   patient: PatientDetails | null;
   referringGP: ReferringGP | null;
   questionnaire: Record<string, string | boolean> | null;
@@ -42,6 +45,7 @@ export interface PatientDetails {
   email: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  emergencyRelationship: string;
   medicareNumber: string;
   ihiNumber: string;
 }
@@ -51,4 +55,5 @@ export interface StepProps {
   update: (patch: Partial<BookingData>) => void;
   next: () => void;
   back: () => void;
+  goTo: (stepId: StepId) => void;
 }

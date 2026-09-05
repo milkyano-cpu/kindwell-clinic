@@ -31,7 +31,7 @@ export function DateTimeStep({ data, update, next, back }: StepProps) {
   const [date, setDate] = useState<Date | undefined>(
     data.slot ? new Date(data.slot.slice(0, 10)) : undefined
   );
-  const [slots, setSlots] = useState<string[]>([]);
+  const [slots, setSlots] = useState<{ time: string; available: boolean }[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
 
@@ -84,7 +84,7 @@ export function DateTimeStep({ data, update, next, back }: StepProps) {
 
   const handleSelectDate = (d: Date | undefined) => {
     setDate(d);
-    update({ slot: null });
+    update({ slot: null, appointmentId: null });
     setOpen(false); // close popover immediately after date pick
   };
 
@@ -150,17 +150,20 @@ export function DateTimeStep({ data, update, next, back }: StepProps) {
           )}
           {!loadingSlots && slots.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
-              {slots.map((s) => (
+              {slots.map(({ time, available }) => (
                 <button
-                  key={s}
-                  onClick={() => update({ slot: s })}
+                  key={time}
+                  disabled={!available}
+                  onClick={() => available && data.slot !== time && update({ slot: time, appointmentId: null })}
                   className={`rounded-lg border py-2.5 text-sm font-medium transition-colors ${
-                    data.slot === s
+                    data.slot === time
                       ? "border-[#6E78FF] bg-[#6E78FF] text-white"
-                      : "border-border hover:border-[#6E78FF]/50"
+                      : available
+                      ? "border-border hover:border-[#6E78FF]/50"
+                      : "border-border bg-gray-50 text-gray-300 cursor-not-allowed"
                   }`}
                 >
-                  {formatSlotDisplay(s)}
+                  {formatSlotDisplay(time)}
                 </button>
               ))}
             </div>

@@ -6,11 +6,12 @@ import { getSteps } from "@/lib/booking/steps-config";
 const STORAGE_KEY = "kindwell-booking";
 
 // Never restore into these steps — slot lock must always run fresh
-const NO_RESTORE = new Set<StepId>(["confirm-payment", "confirmed"]);
+const NO_RESTORE = new Set<StepId>(["confirmed"]);
 
 const initialData: BookingData = {
   service: null, visitType: null, suitability: null, consultationMode: null, duration: null,
-  slot: null, patient: null, referringGP: null, questionnaire: null,
+  providerId: null, providerName: null,
+  slot: null, appointmentId: null, patient: null, referringGP: null, questionnaire: null,
 };
 
 interface Preset {
@@ -86,6 +87,10 @@ export function useBookingFlow(preset?: Preset) {
   const update = (patch: Partial<BookingData>) => setData((prev) => ({ ...prev, ...patch }));
   const next = () => setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   const back = () => setStepIndex((i) => Math.max(i - 1, 0));
+  const goTo = (stepId: StepId) => {
+    const idx = steps.indexOf(stepId);
+    if (idx !== -1) setStepIndex(idx);
+  };
 
-  return { data, update, steps, stepIndex, currentStep, next, back, hydrated };
+  return { data, update, steps, stepIndex, currentStep, next, back, goTo, hydrated };
 }

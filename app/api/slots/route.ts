@@ -33,7 +33,7 @@ export const GET = withACL(
 
     return NextResponse.json({
       date,
-      slots,
+      slots, // { time: string; available: boolean }[]
       fee: {
         grossCents: fee.grossCents,
         medicareRebateCents: fee.medicareRebateCents,

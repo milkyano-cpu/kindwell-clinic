@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withACL } from '@/lib/acl/with-acl'
-import { createPatient, createPatientAddress } from '@/lib/medirecords/patients'
+import { createPatient, createPatientAddress, createPatientRelationship, findPatientIdByEmail } from '@/lib/medirecords/patients'
 import { createAppointment } from '@/lib/medirecords/appointments'
 import { getFeeSchedule } from '@/lib/stripe/fee'
 import { logger } from '@/lib/logger'
 
 const PRACTICE_ID = process.env.MEDIRECORDS_PRACTICE_ID!
-const DEFAULT_PROVIDER_ID = process.env.MEDIRECORDS_PROVIDER_ID || undefined
 
 // GET /v1/code-system/title-code
 const TITLE_CODES: Record<string, number> = {
@@ -57,6 +56,7 @@ const schema = z.object({
   appointmentType: z.enum(['initial', 'follow-up']),
   serviceCategory: z.enum(['alternative-medicine', 'smoking-cessation']),
   duration: z.number().int().optional(),
+  providerId: z.string().uuid().optional(),
   notes: z.string().optional(),
   patient: z.object({
     title: z.string().min(1),
@@ -70,6 +70,9 @@ const schema = z.object({
     suburb: z.string().min(1),
     state: z.string().min(1),
     postcode: z.string().regex(/^\d{4}$/),
+    emergencyContactName: z.string().min(1),
+    emergencyContactPhone: z.string().min(1),
+    emergencyRelationshipCode: z.number().int().min(1),
   }),
 })
 
@@ -78,36 +81,58 @@ export const POST = withACL(
     const fee = getFeeSchedule(body.consultationMode, body.appointmentType, body.serviceCategory, body.duration)
     const appointmentTypeId = resolveAppointmentTypeId(body.consultationMode, body.appointmentType, body.serviceCategory, body.duration)
 
-    const patient = await createPatient({
-      defaultPracticeId: PRACTICE_ID,
-      usualDoctorId: DEFAULT_PROVIDER_ID,
-      titleCode: TITLE_CODES[body.patient.title],
-      firstName: body.patient.firstName,
-      lastName: body.patient.lastName,
-      gender: body.patient.gender,
-      dob: body.patient.dob,
-      patientStatusCode: 1,
-      email: body.patient.email || null,
-      mobilePhone: body.patient.mobilePhone || null,
-      contactMethod: 1,
-    })
+    const existingPatientId = body.patient.email
+      ? await findPatientIdByEmail(body.patient.email).catch(() => null)
+      : null
 
-    await createPatientAddress(patient.id, {
-      addressType: 1,
-      addressLine1: body.patient.address1,
-      cityCode: body.patient.suburb,
-      postcode: body.patient.postcode,
-      stateCode: body.patient.state,
-      countryCode: 'AU',
-    })
+    let patientId: string
+
+    if (existingPatientId) {
+      patientId = existingPatientId
+    } else {
+      const patient = await createPatient({
+        defaultPracticeId: PRACTICE_ID,
+        usualDoctorId: body.providerId ?? null,
+        titleCode: TITLE_CODES[body.patient.title],
+        firstName: body.patient.firstName,
+        lastName: body.patient.lastName,
+        gender: body.patient.gender,
+        dob: body.patient.dob,
+        patientStatusCode: 1,
+        email: body.patient.email || null,
+        mobilePhone: body.patient.mobilePhone || null,
+        contactMethod: 1,
+      })
+      patientId = patient.id
+
+      await createPatientAddress(patientId, {
+        addressType: 1,
+        addressLine1: body.patient.address1,
+        cityCode: body.patient.suburb,
+        postcode: body.patient.postcode,
+        stateCode: body.patient.state,
+        countryCode: 'AU',
+      })
+
+      await createPatientRelationship(patientId, {
+        relationshipCode: body.patient.emergencyRelationshipCode,
+        contactName: body.patient.emergencyContactName,
+        contactMethod: 3,
+        mobilePhone: body.patient.emergencyContactPhone,
+        isEmergency: true,
+        isNOK: true,
+        isFamily: false,
+        isHeadOfFamily: false,
+      })
+    }
 
     const appointment = await createAppointment({
-      patientId: patient.id,
+      patientId,
       appointmentTypeId,
       scheduleTime: body.scheduleTime,
       appointmentStatus: 2,
       appointmentIntervalCode: fee.intervalCode,
-      providerId: DEFAULT_PROVIDER_ID,
+      providerId: body.providerId ?? null,
       notes: body.notes ?? null,
       allowDoubleBookingForPatient: false,
       emailReminder: true,
@@ -127,7 +152,7 @@ export const POST = withACL(
     return NextResponse.json(
       {
         appointmentId: appointment.id,
-        patientId: patient.id,
+        patientId,
         scheduleTime: appointment.scheduleTime,
         expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       },

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { StepProps } from "@/lib/booking/types";
 import { pricingConfig, serviceLabel, visitTypeLabel, modeLabel, formatCurrency } from "@/lib/booking/pricing-config";
+import { RELATIONSHIP_CODE_BY_LABEL } from "@/lib/booking/relationships";
 
 function mapGender(gender: string): number {
   if (gender === "Male") return 1;
@@ -29,7 +30,7 @@ function useExpiryTimer(expiresAt: string | null) {
   return { seconds, expired: seconds === 0 };
 }
 
-export function ConfirmPaymentStep({ data, back }: StepProps) {
+export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,15 @@ export function ConfirmPaymentStep({ data, back }: StepProps) {
   const initiated = useRef(false);
 
   const { seconds, expired } = useExpiryTimer(expiresAt);
+
+  useEffect(() => {
+    if (!expired) return;
+    const t = setTimeout(() => {
+      update({ slot: null, appointmentId: null });
+      goTo("date-time");
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [expired]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (initiated.current) return;
@@ -51,52 +61,62 @@ export function ConfirmPaymentStep({ data, back }: StepProps) {
     const { patient } = data;
 
     const run = async () => {
-      const suitabilityNotes = data.suitability
-        ? Object.entries(data.suitability)
-            .filter(([, v]) => v !== false && v !== "")
-            .map(([k, v]) => `${k}: ${v === true ? "Yes" : v}`)
-            .join("\n")
-        : undefined;
+      let appointmentId = data.appointmentId;
 
-      const bookingRes = await fetch("/api/booking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scheduleTime: data.slot,
-          consultationMode: data.consultationMode,
-          appointmentType: data.visitType,
-          serviceCategory: data.service,
-          ...(data.duration ? { duration: data.duration } : {}),
-          ...(suitabilityNotes ? { notes: suitabilityNotes } : {}),
-          patient: {
-            title: patient.title,
-            firstName: patient.firstName,
-            lastName: patient.lastName,
-            dob: dobToISO(patient.dob),
-            gender: mapGender(patient.gender),
-            email: patient.email,
-            mobilePhone: patient.mobile,
-            address1: patient.address1,
-            suburb: patient.suburb,
-            state: patient.state,
-            postcode: patient.postcode,
-          },
-        }),
-      });
+      if (!appointmentId) {
+        const suitabilityNotes = data.suitability
+          ? Object.entries(data.suitability)
+              .filter(([, v]) => v !== false && v !== "")
+              .map(([k, v]) => `${k}: ${v === true ? "Yes" : v}`)
+              .join("\n")
+          : undefined;
 
-      if (!bookingRes.ok) {
-        const body = await bookingRes.json().catch(() => ({}));
-        throw new Error(body?.error ?? "This slot is no longer available. Please pick another time.");
+        const bookingRes = await fetch("/api/booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scheduleTime: data.slot,
+            consultationMode: data.consultationMode,
+            appointmentType: data.visitType,
+            serviceCategory: data.service,
+            ...(data.duration ? { duration: data.duration } : {}),
+            ...(data.providerId ? { providerId: data.providerId } : {}),
+            ...(suitabilityNotes ? { notes: suitabilityNotes } : {}),
+            patient: {
+              title: patient.title,
+              firstName: patient.firstName,
+              lastName: patient.lastName,
+              dob: dobToISO(patient.dob),
+              gender: mapGender(patient.gender),
+              email: patient.email,
+              mobilePhone: patient.mobile,
+              address1: patient.address1,
+              suburb: patient.suburb,
+              state: patient.state,
+              postcode: patient.postcode,
+              emergencyContactName: patient.emergencyContactName,
+              emergencyContactPhone: patient.emergencyContactPhone,
+              emergencyRelationshipCode: RELATIONSHIP_CODE_BY_LABEL[patient.emergencyRelationship] ?? 19,
+            },
+          }),
+        });
+
+        if (!bookingRes.ok) {
+          const body = await bookingRes.json().catch(() => ({}));
+          throw new Error(body?.error ?? "This slot is no longer available. Please pick another time.");
+        }
+
+        const booking = await bookingRes.json();
+        appointmentId = booking.appointmentId;
+        update({ appointmentId: booking.appointmentId });
+        setExpiresAt(booking.expiresAt);
       }
-
-      const booking = await bookingRes.json();
-      setExpiresAt(booking.expiresAt);
 
       const paymentRes = await fetch("/api/payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          appointmentId: booking.appointmentId,
+          appointmentId,
           consultationMode: data.consultationMode,
           appointmentType: data.visitType,
           serviceCategory: data.service,
@@ -195,7 +215,7 @@ export function ConfirmPaymentStep({ data, back }: StepProps) {
 
       {(expired || error) && (
         <button
-          onClick={back}
+          onClick={() => { update({ slot: null, appointmentId: null }); goTo("date-time"); }}
           className="text-sm font-medium text-[#6E78FF] underline underline-offset-4"
         >
           Back to pick a new time

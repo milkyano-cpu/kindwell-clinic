@@ -6,6 +6,7 @@ import { ServiceStep } from "./steps/service-step";
 import { FirstVisitStep } from "./steps/first-visit-step";
 import { SuitabilityCheckStep } from "./steps/suitability-check-step";
 import { ConsultationModeStep } from "./steps/consultation-mode-step";
+import { ProviderStep } from "./steps/provider-step";
 import { DateTimeStep } from "./steps/date-time-step";
 import { PatientDetailsStep } from "./steps/patient-details-step";
 import { ReferringGPStep } from "./steps/referring-gp-step";
@@ -19,6 +20,7 @@ const STEP_COMPONENTS: Record<StepId, ComponentType<StepProps>> = {
   "first-visit": FirstVisitStep,
   suitability: SuitabilityCheckStep,
   "consultation-mode": ConsultationModeStep,
+  provider: ProviderStep,
   "date-time": DateTimeStep,
   "patient-details": PatientDetailsStep,
   "referring-gp": ReferringGPStep,

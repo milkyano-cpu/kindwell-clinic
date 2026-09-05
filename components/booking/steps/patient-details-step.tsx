@@ -6,13 +6,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { PatientDetails, StepProps } from "@/lib/booking/types";
 import { validatePatient, type PatientFieldErrors } from "@/lib/booking/patient-validation";
+import { RELATIONSHIPS } from "@/lib/booking/relationships";
 
 const emptyPatient: PatientDetails = {
   title: "", firstName: "", lastName: "", dob: "", gender: "",
   address1: "", suburb: "", state: "", postcode: "",
   mobile: "", email: "", emergencyContactName: "", emergencyContactPhone: "",
-  medicareNumber: "", ihiNumber: "",
+  emergencyRelationship: "", medicareNumber: "", ihiNumber: "",
 };
+
 
 const TITLES = ["Mr", "Mrs", "Ms", "Miss", "Dr", "Prof", "Mx"];
 const GENDERS = ["Male", "Female"];
@@ -196,6 +198,14 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
             <TextField label="Emergency Contact Name*" value={patient.emergencyContactName} placeholder="Emergency contact" error={errors.emergencyContactName} onChange={(v) => setField("emergencyContactName", v)} />
             <TextField label="Emergency Contact Phone*" value={patient.emergencyContactPhone} placeholder="Emergency contact" error={errors.emergencyContactPhone} onChange={(v) => setField("emergencyContactPhone", v)} />
           </div>
+          <SelectField
+            label="Relationship to Patient*"
+            value={patient.emergencyRelationship}
+            placeholder="Select relationship"
+            options={RELATIONSHIPS.map((r) => r.label)}
+            error={errors.emergencyRelationship}
+            onChange={(v) => setField("emergencyRelationship", v)}
+          />
         </div>
 
         <div className="space-y-4">

@@ -36,6 +36,7 @@ export const patientSchema = z
     email: z.string().regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, "Enter a valid email."),
     emergencyContactName: z.string().min(1, "Required."),
     emergencyContactPhone: z.string().min(1, "Required."),
+    emergencyRelationship: z.string().min(1, "Required."),
     medicareNumber: z
       .string()
       .transform((v) => v.replace(/\s/g, ""))

@@ -26,3 +26,25 @@ export interface MRAddressCreate {
 export async function createPatientAddress(patientId: string, address: MRAddressCreate): Promise<void> {
   await mrClient.post(`/v1/patients/${patientId}/addresses`, address)
 }
+
+export interface MRRelationshipCreate {
+  relationshipCode: number
+  contactName: string
+  contactMethod: number
+  mobilePhone: string
+  isEmergency: boolean
+  isNOK: boolean
+  isFamily: boolean
+  isHeadOfFamily: boolean
+}
+
+export async function createPatientRelationship(patientId: string, relationship: MRRelationshipCreate): Promise<void> {
+  await mrClient.post(`/v1/patients/${patientId}/relationships`, relationship)
+}
+
+export async function findPatientIdByEmail(email: string): Promise<string | null> {
+  const results = await mrClient.get<{ id: string }[]>(
+    `/v1/patients/exist?email=${encodeURIComponent(email)}`,
+  )
+  return results[0]?.id ?? null
+}
