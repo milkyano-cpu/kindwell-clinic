@@ -41,32 +41,68 @@ function useExpiryTimer(expiresAt: string | null) {
   return { seconds, expired: seconds === 0 };
 }
 
-export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
   const initiated = useRef(false);
 
-  const { seconds, expired } = useExpiryTimer(expiresAt);
+  const { seconds, expired } = useExpiryTimer(data.expiresAt);
 
   useEffect(() => {
     if (!expired) return;
     const t = setTimeout(() => {
-      update({ slot: null, appointmentId: null });
+      update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null });
       goTo("date-time");
     }, 3000);
     return () => clearTimeout(t);
   }, [expired]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchCheckoutUrl = async (appointmentId: string) => {
+    const paymentRes = await fetch("/api/payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        appointmentId,
+        consultationMode: data.consultationMode,
+        appointmentType: data.visitType,
+        serviceCategory: data.service,
+        scheduleTime: data.slot,
+      }),
+    });
+    if (!paymentRes.ok) throw new Error("Failed to create checkout session. Please try again.");
+    const { url } = await paymentRes.json();
+    setCheckoutUrl(url);
+  };
+
+  const handleRetryPayment = async () => {
+    if (!data.appointmentId) return;
+    setPaymentError(null);
+    setRetrying(true);
+    try {
+      await fetchCheckoutUrl(data.appointmentId);
+    } catch (err) {
+      setPaymentError((err as Error).message);
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   useEffect(() => {
     if (initiated.current) return;
     initiated.current = true;
 
     if (!data.service || !data.visitType || !data.consultationMode || !data.slot || !data.patient) {
-      setError("Booking data incomplete. Please go back and try again.");
+      setBookingError("Booking data incomplete. Please go back and try again.");
       setLoading(false);
       return;
+    }
+
+    // Generate idempotency key once per slot selection — persisted in sessionStorage
+    if (!data.bookingKey) {
+      update({ bookingKey: crypto.randomUUID() });
     }
 
     const { patient } = data;
@@ -75,6 +111,7 @@ export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
       let appointmentId = data.appointmentId;
 
       if (!appointmentId) {
+        const bookingKey = data.bookingKey ?? crypto.randomUUID();
         const suitabilityNotes = data.suitability
           ? Object.entries(data.suitability)
               .filter(([, v]) => v !== false && v !== "")
@@ -84,7 +121,7 @@ export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
 
         const bookingRes = await fetch("/api/booking", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Idempotency-Key": bookingKey },
           body: JSON.stringify({
             scheduleTime: data.slot,
             consultationMode: data.consultationMode,
@@ -119,32 +156,22 @@ export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
 
         const booking = await bookingRes.json();
         appointmentId = booking.appointmentId;
-        update({ appointmentId: booking.appointmentId });
-        setExpiresAt(booking.expiresAt);
+        update({ appointmentId: booking.appointmentId, expiresAt: booking.expiresAt });
       }
 
-      const paymentRes = await fetch("/api/payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          appointmentId,
-          consultationMode: data.consultationMode,
-          appointmentType: data.visitType,
-          serviceCategory: data.service,
-          scheduleTime: data.slot,
-        }),
-      });
+      if (!appointmentId) throw new Error("Booking failed — no appointment ID.");
 
-      if (!paymentRes.ok) throw new Error("Failed to create checkout session. Please try again.");
-
-      const { url } = await paymentRes.json();
-      setCheckoutUrl(url);
+      try {
+        await fetchCheckoutUrl(appointmentId);
+      } catch (err) {
+        setPaymentError((err as Error).message);
+      }
     };
 
     run()
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => setBookingError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!data.service || !data.visitType || !data.consultationMode) return null;
 
@@ -153,6 +180,7 @@ export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
   const m = seconds != null ? Math.floor(seconds / 60) : "--";
   const s = seconds != null ? String(seconds % 60).padStart(2, "0") : "--";
   const patient = data.patient;
+  const error = bookingError ?? paymentError;
 
   return (
     <div className="space-y-6 text-center">
@@ -234,7 +262,7 @@ export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
         </div>
 
         <Button
-          disabled={loading || !!error || expired || !checkoutUrl}
+          disabled={loading || !!bookingError || expired || !checkoutUrl}
           onClick={() => { if (checkoutUrl) window.location.href = checkoutUrl; }}
           className="w-full mt-4 py-6 text-base bg-[#6E78FF] hover:bg-[#6E78FF]/90"
         >
@@ -245,6 +273,16 @@ export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
             : `Confirm & Pay ${formatCurrency(fee.net)}`}
         </Button>
 
+        {paymentError && (
+          <button
+            onClick={handleRetryPayment}
+            disabled={retrying}
+            className="w-full mt-2 py-3 text-sm font-medium text-[#6E78FF] underline underline-offset-4 disabled:opacity-50"
+          >
+            {retrying ? "Retrying…" : "Try again"}
+          </button>
+        )}
+
         <div className="pt-4 text-center">
           <p className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
             🔒 Secure payment by
@@ -253,9 +291,9 @@ export function ConfirmPaymentStep({ data, update, back, goTo }: StepProps) {
         </div>
       </div>
 
-      {(expired || error) && (
+      {(expired || bookingError) && (
         <button
-          onClick={() => { update({ slot: null, appointmentId: null }); goTo("date-time"); }}
+          onClick={() => { update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null }); goTo("date-time"); }}
           className="text-sm font-medium text-[#6E78FF] underline underline-offset-4"
         >
           Back to pick a new time

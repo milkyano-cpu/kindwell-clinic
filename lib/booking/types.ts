@@ -26,6 +26,8 @@ export interface BookingData {
   providerName: string | null;
   slot: string | null; // "YYYY-MM-DDTHH:MM" — full ISO schedule time
   appointmentId: string | null;
+  bookingKey: string | null; // idempotency key — stable per slot selection, cleared when slot changes
+  expiresAt: string | null; // ISO timestamp — slot lock expiry, persisted so timer survives refresh
   patient: PatientDetails | null;
   referringGP: ReferringGP | null;
   questionnaire: Record<string, string | boolean> | null;

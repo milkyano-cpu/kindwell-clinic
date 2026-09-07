@@ -5,6 +5,9 @@ import { createPatient, createPatientAddress, createPatientRelationship, findPat
 import { createAppointment } from '@/lib/medirecords/appointments'
 import { getFeeSchedule } from '@/lib/stripe/fee'
 import { logger } from '@/lib/logger'
+import { redis } from '@/lib/redis'
+
+const IDEMPOTENCY_TTL = 900 // 15 min — matches slot lock window
 
 const PRACTICE_ID = process.env.MEDIRECORDS_PRACTICE_ID!
 
@@ -17,6 +20,13 @@ const TITLE_CODES: Record<string, number> = {
   Dr: 315890004,
   Prof: 315890005,
   Mx: 315890012,
+}
+
+// MediRecords mobilePhone requires 8-10 digits — normalize +614XXXXXXXX → 04XXXXXXXX
+function normalizeMobileForMR(phone: string | undefined): string | null {
+  if (!phone) return null
+  if (phone.startsWith('+61')) return '0' + phone.slice(3)
+  return phone
 }
 
 function resolveAppointmentTypeId(
@@ -61,13 +71,13 @@ const schema = z.object({
   patient: z.object({
     title: z.string().min(1),
     firstName: z.string().min(1).nullable(),
-    lastName: z.string().min(1),
+    lastName: z.string().min(1).max(40),
     dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     gender: z.number().int().min(1).max(3),
-    email: z.string().email().optional().or(z.literal('')),
+    email: z.string().email().max(100).optional().or(z.literal('')),
     mobilePhone: z.string().optional(),
-    address1: z.string().min(1),
-    suburb: z.string().min(1),
+    address1: z.string().min(1).max(50),
+    suburb: z.string().min(1).max(60),
     state: z.string().min(1),
     postcode: z.string().regex(/^\d{4}$/),
     emergencyContactName: z.string().min(1),
@@ -77,7 +87,14 @@ const schema = z.object({
 })
 
 export const POST = withACL(
-  async (_, body: z.infer<typeof schema>) => {
+  async (req, body: z.infer<typeof schema>) => {
+    const idempKey = req.headers.get('Idempotency-Key')
+
+    if (idempKey && redis) {
+      const cached = await redis.get<object>(`idempotency:booking:${idempKey}`)
+      if (cached) return NextResponse.json(cached, { status: 201 })
+    }
+
     const fee = getFeeSchedule(body.consultationMode, body.appointmentType, body.serviceCategory, body.duration)
     const appointmentTypeId = resolveAppointmentTypeId(body.consultationMode, body.appointmentType, body.serviceCategory, body.duration)
 
@@ -100,7 +117,7 @@ export const POST = withACL(
         dob: body.patient.dob,
         patientStatusCode: 1,
         email: body.patient.email || null,
-        mobilePhone: body.patient.mobilePhone || null,
+        mobilePhone: normalizeMobileForMR(body.patient.mobilePhone),
         contactMethod: 1,
       })
       patientId = patient.id
@@ -149,15 +166,18 @@ export const POST = withACL(
     })
 
     // Return only what the client needs — no PII
-    return NextResponse.json(
-      {
-        appointmentId: appointment.id,
-        patientId,
-        scheduleTime: appointment.scheduleTime,
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      },
-      { status: 201 },
-    )
+    const result = {
+      appointmentId: appointment.id,
+      patientId,
+      scheduleTime: appointment.scheduleTime,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    }
+
+    if (idempKey && redis) {
+      await redis.set(`idempotency:booking:${idempKey}`, result, { ex: IDEMPOTENCY_TTL })
+    }
+
+    return NextResponse.json(result, { status: 201 })
   },
   {
     schema,

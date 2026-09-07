@@ -22,18 +22,18 @@ export const patientSchema = z
   .object({
     title: z.string().min(1, "Please select a title."),
     firstName: z.string().min(1, "Required."),
-    lastName: z.string().min(1, "Required."),
+    lastName: z.string().min(1, "Required.").max(40, "Max 40 characters."),
     dob: z.string().refine(isValidDob, "Enter a valid date. You must be 18 or older."),
     gender: z.string().min(1, "Required."),
-    address1: z.string().min(1, "Required."),
-    suburb: z.string().min(1, "Required."),
+    address1: z.string().min(1, "Required.").max(50, "Max 50 characters."),
+    suburb: z.string().min(1, "Required.").max(60, "Max 60 characters."),
     state: z.string().min(1, "Required."),
     postcode: z.string().regex(/^\d{4}$/, "Enter a valid 4-digit postcode."),
     mobile: z
       .string()
       .transform(normalizePhone)
       .refine((v) => /^(\+614\d{8}|04\d{8})$/.test(v), "Enter a valid AU mobile (+614 or 04xx xxx xxx)."),
-    email: z.string().regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, "Enter a valid email."),
+    email: z.string().regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, "Enter a valid email.").max(100, "Max 100 characters."),
     emergencyContactName: z.string().min(1, "Required."),
     emergencyContactPhone: z.string().min(1, "Required."),
     emergencyRelationship: z.string().min(1, "Required."),
