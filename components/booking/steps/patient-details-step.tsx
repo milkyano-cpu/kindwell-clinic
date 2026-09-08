@@ -20,13 +20,14 @@ const TITLES = ["Mr", "Mrs", "Ms", "Miss", "Dr", "Prof", "Mx"];
 const GENDERS = ["Male", "Female"];
 const STATES = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"];
 
-function TextField({ label, value, placeholder, error, onChange }: { label: string; value: string; placeholder?: string; error?: string; onChange: (v: string) => void }) {
+function TextField({ label, value, placeholder, error, onChange, maxLength,}: { label: string; value: string; placeholder?: string; error?: string; maxLength?: number; onChange: (v: string) => void }) {
   return (
     <div className="space-y-1.5">
       <label className="text-sm font-medium">{label}</label>
       <input
         value={value}
         placeholder={placeholder}
+        maxLength={maxLength}
         onChange={(e) => onChange(e.target.value)}
         className={`w-full rounded-lg border px-4 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
           error ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-[#6E78FF]"
@@ -185,7 +186,9 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
                 <span className="flex items-center px-3 text-sm text-gray-500 border-r">AU</span>
                 <input
                   value={patient.mobile}
-                  placeholder="+614 xxx-xxxx"
+                  placeholder="+614xxxxxxx"
+                  maxLength={12}
+                  inputMode="tel"
                   onChange={(e) => setField("mobile", e.target.value)}
                   className="w-full rounded-r-lg px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none"
                 />
@@ -196,7 +199,14 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <TextField label="Emergency Contact Name*" value={patient.emergencyContactName} placeholder="Emergency contact" error={errors.emergencyContactName} onChange={(v) => setField("emergencyContactName", v)} />
-            <TextField label="Emergency Contact Phone*" value={patient.emergencyContactPhone} placeholder="Emergency contact" error={errors.emergencyContactPhone} onChange={(v) => setField("emergencyContactPhone", v)} />
+            <TextField
+              label="Emergency Contact Phone*"
+              value={patient.emergencyContactPhone}
+              placeholder="0412345678 or +61412345678"
+              maxLength={12}
+              error={errors.emergencyContactPhone}
+              onChange={(v) => setField("emergencyContactPhone", v)}
+            />
           </div>
           <SelectField
             label="Relationship to Patient*"

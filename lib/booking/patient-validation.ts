@@ -31,11 +31,18 @@ export const patientSchema = z
     postcode: z.string().regex(/^\d{4}$/, "Enter a valid 4-digit postcode."),
     mobile: z
       .string()
-      .transform(normalizePhone)
-      .refine((v) => /^(\+614\d{8}|04\d{8})$/.test(v), "Enter a valid AU mobile (+614 or 04xx xxx xxx)."),
+      .refine(
+        (v) => /^(\+614\d{8}|04\d{8})$/.test(v),
+        "Enter a valid AU mobile (+614 or 04xx xxx xxx)."
+      ),
     email: z.string().regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, "Enter a valid email.").max(100, "Max 100 characters."),
     emergencyContactName: z.string().min(1, "Required."),
-    emergencyContactPhone: z.string().min(1, "Required."),
+    emergencyContactPhone: z
+    .string()
+    .refine(
+      (v) => /^(\+614\d{8}|04\d{8})$/.test(v),
+      "Enter a valid AU mobile (+614 or 04xx xxx xxx)."
+    ),
     emergencyRelationship: z.string().min(1, "Required."),
     medicareNumber: z
       .string()
