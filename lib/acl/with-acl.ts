@@ -42,10 +42,25 @@ export function withACL<T = unknown>(
     } catch (err) {
       if (err instanceof MediRecordsError) {
         const status = err.status >= 500 ? 502 : err.status
-        return NextResponse.json({ error: 'Booking service error', detail: err.body }, { status })
+
+        console.error('[MediRecords Error]', err)
+
+        return NextResponse.json(
+          {
+            error: 'Terjadi kesalahan saat memproses permintaan Anda. Silakan coba lagi.',
+          },
+          { status },
+        )
       }
+
       console.error('[API Error]', err)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+
+      return NextResponse.json(
+        {
+          error: 'Terjadi kesalahan pada sistem. Silakan coba lagi.',
+        },
+        { status: 500 },
+      )
     }
   }
 }
