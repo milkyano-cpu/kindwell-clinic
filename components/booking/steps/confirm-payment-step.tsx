@@ -45,6 +45,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [addressError, setAddressError] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const initiated = useRef(false);
@@ -54,7 +55,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
   useEffect(() => {
     if (!expired) return;
     const t = setTimeout(() => {
-      update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null });
+      update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null, orphanedPatientId: null });
       goTo("date-time");
     }, 3000);
     return () => clearTimeout(t);
@@ -130,6 +131,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
             ...(data.duration ? { duration: data.duration } : {}),
             ...(data.providerId ? { providerId: data.providerId } : {}),
             ...(suitabilityNotes ? { notes: suitabilityNotes } : {}),
+            ...(data.orphanedPatientId ? { orphanedPatientId: data.orphanedPatientId } : {}),
             patient: {
               title: patient.title,
               firstName: patient.firstName,
@@ -151,6 +153,11 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
 
         if (!bookingRes.ok) {
           const body = await bookingRes.json().catch(() => ({}));
+          if (body?.type === "address_validation") {
+            if (body.orphanedPatientId) update({ orphanedPatientId: body.orphanedPatientId });
+            setAddressError(body.error ?? "Your address details are invalid. Please check and try again.");
+            return;
+          }
           throw new Error(body?.error ?? "This slot is no longer available. Please pick another time.");
         }
 
@@ -180,7 +187,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
   const m = seconds != null ? Math.floor(seconds / 60) : "--";
   const s = seconds != null ? String(seconds % 60).padStart(2, "0") : "--";
   const patient = data.patient;
-  const error = bookingError ?? paymentError;
+  const error = bookingError ?? addressError ?? paymentError;
 
   return (
     <div className="space-y-6 text-center">
@@ -291,9 +298,17 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
         </div>
       </div>
 
+      {addressError && (
+        <button
+          onClick={() => goTo("patient-details")}
+          className="text-sm font-medium text-[#6E78FF] underline underline-offset-4"
+        >
+          Fix address details
+        </button>
+      )}
       {(expired || bookingError) && (
         <button
-          onClick={() => { update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null }); goTo("date-time"); }}
+          onClick={() => { update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null, orphanedPatientId: null }); goTo("date-time"); }}
           className="text-sm font-medium text-[#6E78FF] underline underline-offset-4"
         >
           Back to pick a new time

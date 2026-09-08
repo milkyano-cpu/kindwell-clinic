@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withACL } from '@/lib/acl/with-acl'
 import { createPatient, createPatientAddress, createPatientRelationship, findPatientIdByEmail } from '@/lib/medirecords/patients'
+import { MediRecordsError } from '@/lib/medirecords/client'
 import { createAppointment } from '@/lib/medirecords/appointments'
 import { getFeeSchedule } from '@/lib/stripe/fee'
 import { logger } from '@/lib/logger'
@@ -68,6 +69,7 @@ const schema = z.object({
   duration: z.number().int().optional(),
   providerId: z.string().uuid().optional(),
   notes: z.string().optional(),
+  orphanedPatientId: z.string().uuid().optional(),
   patient: z.object({
     title: z.string().min(1),
     firstName: z.string().min(1).nullable(),
@@ -103,6 +105,7 @@ export const POST = withACL(
       : null
 
     let patientId: string
+    let isNewPatient = false
 
     if (existingPatientId) {
       patientId = existingPatientId
@@ -121,16 +124,40 @@ export const POST = withACL(
         contactMethod: 1,
       })
       patientId = patient.id
+      isNewPatient = true
+    }
 
-      await createPatientAddress(patientId, {
-        addressType: 1,
-        addressLine1: body.patient.address1,
-        cityCode: body.patient.suburb,
-        postcode: body.patient.postcode,
-        stateCode: body.patient.state,
-        countryCode: 'AU',
-      })
+    // Run address creation for new patients OR when retrying after a previous address failure
+    const needsAddress = isNewPatient || body.orphanedPatientId === patientId
+    if (needsAddress) {
+      try {
+        await createPatientAddress(patientId, {
+          addressType: 1,
+          addressLine1: body.patient.address1,
+          cityCode: body.patient.suburb,
+          postcode: body.patient.postcode,
+          stateCode: body.patient.state,
+          countryCode: 'AU',
+        })
+      } catch (err) {
+        if (err instanceof MediRecordsError) {
+          const mrBody = err.body as { errors?: { parameter: string; message: string }[] }
+          const addrErr = mrBody?.errors?.find((e) =>
+            ['cityCode', 'stateCode', 'postcode'].includes(e.parameter)
+          )
+          if (addrErr) {
+            return NextResponse.json(
+              { error: addrErr.message, type: 'address_validation', orphanedPatientId: patientId },
+              { status: 422 },
+            )
+          }
+        }
+        throw err
+      }
+    }
 
+    // Relationship only for new patients — avoid duplicate emergency contacts
+    if (isNewPatient) {
       await createPatientRelationship(patientId, {
         relationshipCode: body.patient.emergencyRelationshipCode,
         contactName: body.patient.emergencyContactName,
