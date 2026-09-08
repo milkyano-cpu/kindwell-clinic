@@ -43,11 +43,15 @@ export function withACL<T = unknown>(
       if (err instanceof MediRecordsError) {
         const status = err.status >= 500 ? 502 : err.status
 
-        console.error('[MediRecords Error]', err)
+        console.error('[MediRecords Error]', {
+          status: err.status,
+          body: err.body,
+        })
 
         return NextResponse.json(
           {
-            error: 'Terjadi kesalahan saat memproses permintaan Anda. Silakan coba lagi.',
+            error: 'Terjadi kesalahan saat memproses permintaan. Silakan coba lagi.',
+            detail: err.body,
           },
           { status },
         )
