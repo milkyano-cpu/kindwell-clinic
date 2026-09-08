@@ -59,18 +59,33 @@ function SelectField({ label, value, placeholder, options, error, onChange }: { 
   );
 }
 
-function SuburbField({ value, postcode, error, onChange }: { value: string; postcode: string; error?: string; onChange: (v: string) => void }) {
+function SuburbField({ value, postcode, state, error, onChange }: { value: string; postcode: string; state: string; error?: string; onChange: (v: string) => void }) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [inputText, setInputText] = useState(value);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // Sync display text when parent clears the value
+  useEffect(() => { setInputText(value); }, [value]);
+
   useEffect(() => {
-    if (!/^\d{4}$/.test(postcode)) { setSuggestions([]); return; }
-    fetch(`/api/suburbs?postcode=${postcode}`)
+    if (!/^\d{4}$/.test(postcode) || !state) {
+      setSuggestions([]);
+      onChange("");
+      setInputText("");
+      return;
+    }
+    setLoading(true);
+    fetch(`/api/suburbs?postcode=${postcode}&state=${state}`)
       .then((r) => r.json())
       .then((d) => setSuggestions(d.suburbs ?? []))
-      .catch(() => setSuggestions([]));
-  }, [postcode]);
+      .catch(() => setSuggestions([]))
+      .finally(() => setLoading(false));
+    // Clear previous selection when postcode/state changes
+    onChange("");
+    setInputText("");
+  }, [postcode, state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -80,20 +95,41 @@ function SuburbField({ value, postcode, error, onChange }: { value: string; post
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = suggestions.filter((s) => s.toLowerCase().startsWith(value.toLowerCase()));
+  const isReady = /^\d{4}$/.test(postcode) && !!state;
+  const noData = isReady && !loading && suggestions.length === 0;
+  const disabled = !isReady || loading || noData;
+
+  const filtered = suggestions.filter((s) => s.toLowerCase().startsWith(inputText.toLowerCase()));
   const showList = open && filtered.length > 0;
+
+  const handleSelect = (s: string) => { onChange(s); setInputText(s); setOpen(false); };
+  const handleBlur = () => {
+    // Revert display text to last valid selection if user typed something not in the list
+    if (!suggestions.includes(inputText)) { setInputText(value); }
+    setOpen(false);
+  };
+
+  const placeholder = !isReady
+    ? "Fill in state & postcode first."
+    : loading
+    ? "Loading suburbs…"
+    : noData
+    ? "No suburbs found for this postcode."
+    : "Type to search and select a suburb.";
 
   return (
     <div className="space-y-1.5" ref={ref}>
       <label className="text-sm font-medium">City / Suburb*</label>
       <div className="relative">
         <input
-          value={value}
-          placeholder="Please enter your suburb."
+          value={inputText}
+          placeholder={placeholder}
           autoComplete="off"
-          onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+          disabled={disabled}
+          onChange={(e) => { setInputText(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          className={`w-full rounded-lg border px-4 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+          onBlur={handleBlur}
+          className={`w-full rounded-lg border px-4 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${
             error ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-[#6E78FF]"
           }`}
         />
@@ -102,7 +138,7 @@ function SuburbField({ value, postcode, error, onChange }: { value: string; post
             {filtered.map((s) => (
               <li
                 key={s}
-                onMouseDown={() => { onChange(s); setOpen(false); }}
+                onMouseDown={() => handleSelect(s)}
                 className="cursor-pointer px-4 py-2 hover:bg-[#6E78FF]/10"
               >
                 {s}
@@ -223,14 +259,12 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
 
         <div className="space-y-4">
           <p className="text-sm font-semibold">Address</p>
-          <div className="grid grid-cols-2 gap-4">
-            <TextField label="Address 1*" value={patient.address1} placeholder="Please enter your street address." error={errors.address1} onChange={(v) => setField("address1", v)} />
-            <SuburbField value={patient.suburb} postcode={patient.postcode} error={errors.suburb} onChange={(v) => setField("suburb", v)} />
-          </div>
+          <TextField label="Address*" value={patient.address1} placeholder="Please enter your street address." error={errors.address1} onChange={(v) => setField("address1", v)} />
           <div className="grid grid-cols-2 gap-4">
             <SelectField label="State*" value={patient.state} placeholder="Please select your state." options={STATES} error={errors.state} onChange={(v) => setField("state", v)} />
             <TextField label="Postcode*" value={patient.postcode} placeholder="Postcode" error={errors.postcode} onChange={(v) => setField("postcode", v)} />
           </div>
+          <SuburbField value={patient.suburb} postcode={patient.postcode} state={patient.state} error={errors.suburb} onChange={(v) => setField("suburb", v)} />
         </div>
 
         <div className="space-y-4">

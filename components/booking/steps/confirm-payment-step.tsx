@@ -55,7 +55,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
   useEffect(() => {
     if (!expired) return;
     const t = setTimeout(() => {
-      update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null, orphanedPatientId: null });
+      update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null });
       goTo("date-time");
     }, 3000);
     return () => clearTimeout(t);
@@ -131,7 +131,6 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
             ...(data.duration ? { duration: data.duration } : {}),
             ...(data.providerId ? { providerId: data.providerId } : {}),
             ...(suitabilityNotes ? { notes: suitabilityNotes } : {}),
-            ...(data.orphanedPatientId ? { orphanedPatientId: data.orphanedPatientId } : {}),
             patient: {
               title: patient.title,
               firstName: patient.firstName,
@@ -154,7 +153,6 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
         if (!bookingRes.ok) {
           const body = await bookingRes.json().catch(() => ({}));
           if (body?.type === "address_validation") {
-            if (body.orphanedPatientId) update({ orphanedPatientId: body.orphanedPatientId });
             setAddressError(body.error ?? "Your address details are invalid. Please check and try again.");
             return;
           }
@@ -308,7 +306,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
       )}
       {(expired || bookingError) && (
         <button
-          onClick={() => { update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null, orphanedPatientId: null }); goTo("date-time"); }}
+          onClick={() => { update({ slot: null, appointmentId: null, bookingKey: null, expiresAt: null }); goTo("date-time"); }}
           className="text-sm font-medium text-[#6E78FF] underline underline-offset-4"
         >
           Back to pick a new time

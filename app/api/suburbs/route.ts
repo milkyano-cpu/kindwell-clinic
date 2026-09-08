@@ -9,31 +9,35 @@ const CACHE_TTL = 86400 // 24h
 
 type Lookup = Record<string, string[]>
 
+const col = (s: string) => s?.trim().replace(/^"|"$/g, '') ?? ''
+
 async function buildLookup(): Promise<Lookup> {
   const res = await fetch(DATASET_URL)
   if (!res.ok) throw new Error('Failed to fetch postcode dataset')
   const csv = await res.text()
 
   const lookup: Lookup = {}
-  const lines = csv.split('\n')
-  // header: id,postcode,locality,state,long,lat,dc,type,status
+  const lines = csv.split(/\r?\n/)
+  // header: id,postcode,locality,state,...
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',')
-    if (cols.length < 5) continue
-    const postcode = cols[1]?.trim()
-    const locality = cols[2]?.trim()
-    const type = cols[7]?.trim()
-    // Only delivery area localities — excludes PO boxes, LVRs, DCs
-    if (!postcode || !locality || type !== 'Delivery Area') continue
-    if (!lookup[postcode]) lookup[postcode] = []
-    if (!lookup[postcode].includes(locality)) lookup[postcode].push(locality)
+    if (cols.length < 4) continue
+    const postcode = col(cols[1])
+    const locality = col(cols[2])
+    const state = col(cols[3])
+    if (!postcode || !locality || !state) continue
+    const key = `${postcode}:${state}`
+    if (!lookup[key]) lookup[key] = []
+    if (!lookup[key].includes(locality)) lookup[key].push(locality)
   }
   return lookup
 }
 
 export async function GET(req: NextRequest) {
   const postcode = req.nextUrl.searchParams.get('postcode')
-  if (!postcode || !/^\d{4}$/.test(postcode)) {
+  const state = req.nextUrl.searchParams.get('state')
+
+  if (!postcode || !/^\d{4}$/.test(postcode) || !state) {
     return NextResponse.json({ suburbs: [] })
   }
 
@@ -51,7 +55,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const suburbs = lookup[postcode] ?? []
+    const suburbs = lookup[`${postcode}:${state}`] ?? []
     return NextResponse.json({ suburbs: suburbs.sort() })
   } catch {
     return NextResponse.json({ suburbs: [] })
