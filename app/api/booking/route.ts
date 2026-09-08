@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withACL } from '@/lib/acl/with-acl'
-import { createPatient, createPatientAddress, createPatientRelationship, findPatientIdByEmail } from '@/lib/medirecords/patients'
+import { createPatient, createPatientAddress, createPatientRelationship, findPatientIdByEmail, deletePatient } from '@/lib/medirecords/patients'
 import { MediRecordsError } from '@/lib/medirecords/client'
 import { createAppointment } from '@/lib/medirecords/appointments'
 import { getFeeSchedule } from '@/lib/stripe/fee'
@@ -69,7 +69,6 @@ const schema = z.object({
   duration: z.number().int().optional(),
   providerId: z.string().uuid().optional(),
   notes: z.string().optional(),
-  orphanedPatientId: z.string().uuid().optional(),
   patient: z.object({
     title: z.string().min(1),
     firstName: z.string().min(1).nullable(),
@@ -127,9 +126,7 @@ export const POST = withACL(
       isNewPatient = true
     }
 
-    // Run address creation for new patients OR when retrying after a previous address failure
-    const needsAddress = isNewPatient || body.orphanedPatientId === patientId
-    if (needsAddress) {
+    if (isNewPatient) {
       try {
         await createPatientAddress(patientId, {
           addressType: 1,
@@ -140,6 +137,9 @@ export const POST = withACL(
           countryCode: 'AU',
         })
       } catch (err) {
+        // Rollback: delete the just-created patient so there's no orphaned record
+        await deletePatient(patientId).catch(() => null)
+
         if (err instanceof MediRecordsError) {
           const mrBody = err.body as { errors?: { parameter: string; message: string }[] }
           const addrErr = mrBody?.errors?.find((e) =>
@@ -147,17 +147,14 @@ export const POST = withACL(
           )
           if (addrErr) {
             return NextResponse.json(
-              { error: addrErr.message, type: 'address_validation', orphanedPatientId: patientId },
+              { error: addrErr.message, type: 'address_validation' },
               { status: 422 },
             )
           }
         }
         throw err
       }
-    }
 
-    // Relationship only for new patients — avoid duplicate emergency contacts
-    if (isNewPatient) {
       await createPatientRelationship(patientId, {
         relationshipCode: body.patient.emergencyRelationshipCode,
         contactName: body.patient.emergencyContactName,

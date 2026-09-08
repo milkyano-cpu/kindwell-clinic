@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -53,6 +53,63 @@ function SelectField({ label, value, placeholder, options, error, onChange }: { 
           {options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
         <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+function SuburbField({ value, postcode, error, onChange }: { value: string; postcode: string; error?: string; onChange: (v: string) => void }) {
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!/^\d{4}$/.test(postcode)) { setSuggestions([]); return; }
+    fetch(`/api/suburbs?postcode=${postcode}`)
+      .then((r) => r.json())
+      .then((d) => setSuggestions(d.suburbs ?? []))
+      .catch(() => setSuggestions([]));
+  }, [postcode]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = suggestions.filter((s) => s.toLowerCase().startsWith(value.toLowerCase()));
+  const showList = open && filtered.length > 0;
+
+  return (
+    <div className="space-y-1.5" ref={ref}>
+      <label className="text-sm font-medium">City / Suburb*</label>
+      <div className="relative">
+        <input
+          value={value}
+          placeholder="Please enter your suburb."
+          autoComplete="off"
+          onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          className={`w-full rounded-lg border px-4 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+            error ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-[#6E78FF]"
+          }`}
+        />
+        {showList && (
+          <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-md text-sm">
+            {filtered.map((s) => (
+              <li
+                key={s}
+                onMouseDown={() => { onChange(s); setOpen(false); }}
+                className="cursor-pointer px-4 py-2 hover:bg-[#6E78FF]/10"
+              >
+                {s}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
@@ -168,7 +225,7 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
           <p className="text-sm font-semibold">Address</p>
           <div className="grid grid-cols-2 gap-4">
             <TextField label="Address 1*" value={patient.address1} placeholder="Please enter your street address." error={errors.address1} onChange={(v) => setField("address1", v)} />
-            <TextField label="City / Suburb*" value={patient.suburb} placeholder="Please enter your suburb." error={errors.suburb} onChange={(v) => setField("suburb", v)} />
+            <SuburbField value={patient.suburb} postcode={patient.postcode} error={errors.suburb} onChange={(v) => setField("suburb", v)} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <SelectField label="State*" value={patient.state} placeholder="Please select your state." options={STATES} error={errors.state} onChange={(v) => setField("state", v)} />

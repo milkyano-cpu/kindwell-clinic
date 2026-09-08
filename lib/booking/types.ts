@@ -28,7 +28,6 @@ export interface BookingData {
   appointmentId: string | null;
   bookingKey: string | null; // idempotency key — stable per slot selection, cleared when slot changes
   expiresAt: string | null; // ISO timestamp — slot lock expiry, persisted so timer survives refresh
-  orphanedPatientId: string | null; // set when address creation fails — ensures address is retried even for "existing" patient
   patient: PatientDetails | null;
   referringGP: ReferringGP | null;
   questionnaire: Record<string, string | boolean> | null;

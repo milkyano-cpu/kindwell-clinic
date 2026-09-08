@@ -42,6 +42,10 @@ export async function createPatientRelationship(patientId: string, relationship:
   await mrClient.post(`/v1/patients/${patientId}/relationships`, relationship)
 }
 
+export async function deletePatient(patientId: string): Promise<void> {
+  await mrClient.delete(`/v1/patients/${patientId}`)
+}
+
 export async function findPatientIdByEmail(email: string): Promise<string | null> {
   const results = await mrClient.get<{ id: string }[]>(
     `/v1/patients/exist?email=${encodeURIComponent(email)}`,
