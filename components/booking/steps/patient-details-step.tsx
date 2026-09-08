@@ -186,7 +186,7 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
                 <span className="flex items-center px-3 text-sm text-gray-500 border-r">AU</span>
                 <input
                   value={patient.mobile}
-                  placeholder="+614xxxxxxx"
+                  placeholder="+614xxxxxxx or 04xxxxxxxx"
                   maxLength={12}
                   inputMode="tel"
                   onChange={(e) => setField("mobile", e.target.value)}
@@ -202,7 +202,7 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
             <TextField
               label="Emergency Contact Phone*"
               value={patient.emergencyContactPhone}
-              placeholder="0412345678 or +61412345678"
+              placeholder="+614xxxxxxx or 04xxxxxxxx"
               maxLength={12}
               error={errors.emergencyContactPhone}
               onChange={(v) => setField("emergencyContactPhone", v)}
