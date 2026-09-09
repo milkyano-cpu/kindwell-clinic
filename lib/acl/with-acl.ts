@@ -50,7 +50,7 @@ export function withACL<T = unknown>(
 
         return NextResponse.json(
           {
-            error: 'Terjadi kesalahan saat memproses permintaan. Silakan coba lagi.',
+            error: 'An error occurred while processing your request. Please try again.',
             detail: err.body,
           },
           { status },
@@ -61,7 +61,7 @@ export function withACL<T = unknown>(
 
       return NextResponse.json(
         {
-          error: 'Terjadi kesalahan pada sistem. Silakan coba lagi.',
+          error: 'A system error occurred. Please try again later.',
         },
         { status: 500 },
       )

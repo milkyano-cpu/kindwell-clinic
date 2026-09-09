@@ -18,11 +18,12 @@ const services: { value: ServiceType; label: string; description: string }[] = [
 export function ServiceStep({ data, update, next }: StepProps) {
   return (
     <div className="space-y-6">
-      <div className="flex justify-center">
-        <h1 className="whitespace-nowrap text-4xl font-bold text-[#6E78FF]">
+      <div className="flex justify-center px-4">
+        <h1 className="text-center text-[28px] font-bold leading-tight text-[#6E78FF] sm:text-4xl">
           What can we help you with today?
         </h1>
       </div>
+
 
       <p className="text-center text-muted-foreground text-sm">
         Choose the service you'd like to book.
