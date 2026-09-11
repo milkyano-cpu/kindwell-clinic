@@ -44,8 +44,8 @@ export function ConsultationModeStep({ data, update, next, back }: StepProps) {
 
   return (
     <div className="space-y-6 text-center">
-      <div className="flex justify-center">
-        <h1 className="whitespace-nowrap text-4xl font-bold text-[#6E78FF]">
+      <div className="flex justify-center px-4">
+        <h1 className="text-center text-[28px] font-bold leading-tight text-[#6E78FF] sm:text-4xl">
           How would you like to be seen?
         </h1>
       </div>
