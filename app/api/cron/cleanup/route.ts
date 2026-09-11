@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { getAppointments, deleteAppointment } from '@/lib/medirecords/appointments'
+import { getAppointmentById, deleteAppointment } from '@/lib/medirecords/appointments'
+import { redis } from '@/lib/redis'
 import { logger } from '@/lib/logger'
 
 // Vercel Cron: runs every 20 minutes to release expired slot locks
@@ -10,27 +11,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const now = new Date()
-  const cutoff = new Date(now.getTime() - 20 * 60 * 1000) // 20 min ago
-  const today = now.toISOString().slice(0, 10)
+  if (!redis) return NextResponse.json({ cleaned: 0 })
+  const r = redis // narrowed — safe to use inside callbacks
 
-  // Fetch all "Booked" (status=2) appointments for today
-  const stale = await getAppointments({
-    appointmentDateRangeStart: `${today}T00:00`,
-    appointmentDateRangeEnd: `${today}T23:59`,
-    appointmentStatus: 2,
-  })
-
-  const expired = stale.filter(
-    a => new Date(a.createdDateTime) < cutoff,
-  )
+  // Only delete appointments we created — tracked in the slot-locks sorted set.
+  // Score = creation timestamp (ms). Cutoff = 25 min ago, giving the
+  // checkout.session.expired webhook (fires at 20 min) time to run first.
+  const cutoff = Date.now() - 25 * 60 * 1000
+  const ids = await r.zrange<string[]>('slot-locks', 0, cutoff, { byScore: true })
 
   await Promise.allSettled(
-    expired.map(async a => {
-      await deleteAppointment(a.id)
-      await logger.log({ event: 'booking.expired_lock_released', appointmentId: a.id })
+    ids.map(async id => {
+      const appointment = await getAppointmentById(id)
+      if (appointment.appointmentStatus !== 2) {
+        // Already confirmed or cancelled — stale Redis entry, just clean up
+        await r.zrem('slot-locks', id)
+        return
+      }
+      await deleteAppointment(id)
+      await r.zrem('slot-locks', id)
+      await logger.log({ event: 'booking.expired_lock_released', appointmentId: id })
     }),
   )
 
-  return NextResponse.json({ cleaned: expired.length })
+  return NextResponse.json({ cleaned: ids.length })
 }

@@ -189,6 +189,11 @@ export const POST = withACL(
       serviceCategory: body.serviceCategory,
     })
 
+    // Track slot lock so cron only deletes appointments created by this app
+    if (redis) {
+      await redis.zadd('slot-locks', { score: Date.now(), member: appointment.id })
+    }
+
     // Return only what the client needs — no PII
     const result = {
       appointmentId: appointment.id,

@@ -1,6 +1,7 @@
 import type Stripe from 'stripe'
 import { stripe } from './client'
 import { getAppointmentById, updateAppointment, deleteAppointment } from '@/lib/medirecords/appointments'
+import { redis } from '@/lib/redis'
 import { logger } from '@/lib/logger'
 
 export function verifyWebhookSignature(payload: string, signature: string): Stripe.Event {
@@ -32,6 +33,8 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
     reminderType: existing.reminderType,
   })
 
+  if (redis) await redis.zrem('slot-locks', appointmentId)
+
   await logger.log({
     event: 'booking.confirmed',
     appointmentId,
@@ -47,6 +50,7 @@ export async function handleCheckoutExpired(session: Stripe.Checkout.Session): P
   if (!appointmentId) return
 
   await deleteAppointment(appointmentId)
+  if (redis) await redis.zrem('slot-locks', appointmentId)
 
   await logger.log({
     event: 'booking.payment_failed',

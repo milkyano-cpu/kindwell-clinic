@@ -66,6 +66,7 @@ function SuburbField({ value, postcode, state, error, onChange }: { value: strin
   const [inputText, setInputText] = useState(value);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isMounted = useRef(false);
 
   // Sync display text when parent clears the value
   useEffect(() => { setInputText(value); }, [value]);
@@ -73,8 +74,8 @@ function SuburbField({ value, postcode, state, error, onChange }: { value: strin
   useEffect(() => {
     if (!/^\d{4}$/.test(postcode) || !state) {
       setSuggestions([]);
-      onChange("");
-      setInputText("");
+      if (isMounted.current) { onChange(""); setInputText(""); }
+      isMounted.current = true;
       return;
     }
     setLoading(true);
@@ -83,9 +84,9 @@ function SuburbField({ value, postcode, state, error, onChange }: { value: strin
       .then((d) => setSuggestions(d.suburbs ?? []))
       .catch(() => setSuggestions([]))
       .finally(() => setLoading(false));
-    // Clear previous selection when postcode/state changes
-    onChange("");
-    setInputText("");
+    // Only clear when postcode/state changes after initial mount
+    if (isMounted.current) { onChange(""); setInputText(""); }
+    isMounted.current = true;
   }, [postcode, state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

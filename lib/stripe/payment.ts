@@ -31,6 +31,10 @@ export async function createBookingCheckoutSession(params: BookingCheckoutParams
   return stripe.checkout.sessions.create({
     mode: 'payment',
     line_items: [{ price: priceId, quantity: 1 }],
+    // Expire after 20 min — matches slot hold timer shown to user.
+    // checkout.session.expired webhook fires at expiry and deletes the appointment,
+    // so the cron never races against an active session.
+    expires_at: Math.floor(Date.now() / 1000) + 20 * 60,
     metadata: {
       appointmentId: params.appointmentId,
       consultationMode: params.consultationMode,
