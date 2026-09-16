@@ -8,7 +8,7 @@ import { getFeeSchedule } from '@/lib/stripe/fee'
 import { logger } from '@/lib/logger'
 import { redis } from '@/lib/redis'
 
-const IDEMPOTENCY_TTL = 900 // 15 min — matches slot lock window
+const IDEMPOTENCY_TTL = 1800 // 30 min — matches slot lock window (Stripe checkout minimum expiry)
 
 const PRACTICE_ID = process.env.MEDIRECORDS_PRACTICE_ID!
 
@@ -199,7 +199,7 @@ export const POST = withACL(
       appointmentId: appointment.id,
       patientId,
       scheduleTime: appointment.scheduleTime,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     }
 
     if (idempKey && redis) {
