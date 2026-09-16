@@ -52,16 +52,16 @@ export const patientSchema = z
     mobile: z
       .string()
       .refine(
-        (v) => /^(\+614\d{8}|04\d{8})$/.test(v),
-        "Enter a valid AU mobile (+614 or 04xx xxx xxx)."
+        (v) => /^04\d{8}$/.test(v),
+        "Enter a valid AU mobile (04xxxxxxxxx)."
       ),
     email: z.string().regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, "Enter a valid email.").max(100, "Max 100 characters."),
     emergencyContactName: z.string().min(1, "Required."),
     emergencyContactPhone: z
     .string()
     .refine(
-      (v) => /^(\+614\d{8}|04\d{8})$/.test(v),
-      "Enter a valid AU mobile (+614 or 04xx xxx xxx)."
+      (v) => /^04\d{8}$/.test(v),
+      "Enter a valid AU mobile (04xxxxxxxxx)."
     ),
     emergencyRelationship: z.string().min(1, "Required."),
     medicareNumber: z

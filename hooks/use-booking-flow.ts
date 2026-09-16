@@ -9,7 +9,7 @@ const STORAGE_KEY = "kindwell-booking";
 const NO_RESTORE = new Set<StepId>(["confirmed"]);
 
 const initialData: BookingData = {
-  service: null, visitType: null, suitability: null, consultationMode: null, duration: null,
+  service: null, email: null, mobile: null, visitType: null, suitability: null, consultationMode: null, duration: null,
   providerId: null, providerName: null,
   slot: null, appointmentId: null, bookingKey: null, expiresAt: null, patient: null, referringGP: null, questionnaire: null,
 };

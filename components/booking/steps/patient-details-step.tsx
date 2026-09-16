@@ -219,7 +219,8 @@ function DOBField({ value, error, onChange }: { value: string; error?: string; o
 }
 
 export function PatientDetailsStep({ data, update, next, back }: StepProps) {
-  const patient = data.patient ?? emptyPatient;
+  const patient = data.patient ?? { ...emptyPatient, email: data.email ?? "" };
+  const emailLocked = !!data.email;
   const [errors, setErrors] = useState<PatientFieldErrors>({});
   const [touched, setTouched] = useState(false);
 
@@ -278,7 +279,7 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
                 <span className="flex items-center px-3 text-sm text-gray-500 border-r">AU</span>
                 <input
                   value={patient.mobile}
-                  placeholder="+614xxxxxxx or 04xxxxxxxx"
+                  placeholder="04xxxxxxxxx"
                   maxLength={12}
                   inputMode="tel"
                   onChange={(e) => setField("mobile", e.target.value)}
@@ -287,14 +288,31 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
               </div>
               {errors.mobile && <p className="text-xs text-red-600">{errors.mobile}</p>}
             </div>
-            <TextField label="Email Address*" value={patient.email} placeholder="google@gmail.com" error={errors.email} onChange={(v) => setField("email", v)} />
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Email Address*</label>
+              <input
+                type="email"
+                value={patient.email}
+                readOnly={emailLocked}
+                placeholder="google@gmail.com"
+                onChange={emailLocked ? undefined : (e) => setField("email", e.target.value)}
+                className={`w-full rounded-lg border px-4 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+                  emailLocked
+                    ? "bg-gray-50 text-gray-500 cursor-not-allowed border-gray-200"
+                    : errors.email
+                    ? "border-red-400 focus:ring-red-400"
+                    : "border-gray-300 focus:ring-[#6E78FF]"
+                }`}
+              />
+              {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <TextField label="Emergency Contact Name*" value={patient.emergencyContactName} placeholder="Emergency contact" error={errors.emergencyContactName} onChange={(v) => setField("emergencyContactName", v)} />
             <TextField
               label="Emergency Contact Phone*"
               value={patient.emergencyContactPhone}
-              placeholder="+614xxxxxxx or 04xxxxxxxx"
+              placeholder="04xxxxxxxxx"
               maxLength={12}
               error={errors.emergencyContactPhone}
               onChange={(v) => setField("emergencyContactPhone", v)}

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withACL } from '@/lib/acl/with-acl'
-import { createPatient, createPatientAddress, createPatientRelationship, findPatientIdByEmail, deletePatient } from '@/lib/medirecords/patients'
+import { createPatient, createPatientAddress, createPatientRelationship, findPatientIdByEmail, findPatientIdByMobile, normalizeMobile, deletePatient } from '@/lib/medirecords/patients'
 import { MediRecordsError } from '@/lib/medirecords/client'
-import { createAppointment } from '@/lib/medirecords/appointments'
+import { createAppointment, hasCompletedAppointment } from '@/lib/medirecords/appointments'
 import { getFeeSchedule } from '@/lib/stripe/fee'
 import { logger } from '@/lib/logger'
 import { redis } from '@/lib/redis'
@@ -23,12 +23,6 @@ const TITLE_CODES: Record<string, number> = {
   Mx: 315890012,
 }
 
-// MediRecords mobilePhone requires 8-10 digits — normalize +614XXXXXXXX → 04XXXXXXXX
-function normalizeMobileForMR(phone: string | undefined): string | null {
-  if (!phone) return null
-  if (phone.startsWith('+61')) return '0' + phone.slice(3)
-  return phone
-}
 
 function resolveAppointmentTypeId(
   mode: 'telehealth' | 'face-to-face',
@@ -69,21 +63,22 @@ const schema = z.object({
   duration: z.number().int().optional(),
   providerId: z.string().uuid().optional(),
   notes: z.string().optional(),
+  // Follow-up patients (already in MediRecords) only need email — all other fields optional
   patient: z.object({
-    title: z.string().min(1),
-    firstName: z.string().min(1).nullable(),
-    lastName: z.string().min(1).max(40),
-    dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    gender: z.number().int().min(1).max(3),
     email: z.string().email().max(100).optional().or(z.literal('')),
-    mobilePhone: z.string().optional(),
-    address1: z.string().min(1).max(50),
-    suburb: z.string().min(1).max(60),
-    state: z.string().min(1),
-    postcode: z.string().regex(/^\d{4}$/),
-    emergencyContactName: z.string().min(1),
-    emergencyContactPhone: z.string().min(1),
-    emergencyRelationshipCode: z.number().int().min(1),
+    title: z.string().min(1).optional(),
+    firstName: z.string().min(1).nullable().optional(),
+    lastName: z.string().min(1).max(40).optional(),
+    dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    gender: z.number().int().min(1).max(3).optional(),
+    mobilePhone: z.string().regex(/^04\d{8}$/).optional(),
+    address1: z.string().min(1).max(50).optional(),
+    suburb: z.string().min(1).max(60).optional(),
+    state: z.string().min(1).optional(),
+    postcode: z.string().regex(/^\d{4}$/).optional(),
+    emergencyContactName: z.string().min(1).optional(),
+    emergencyContactPhone: z.string().min(1).optional(),
+    emergencyRelationshipCode: z.number().int().min(1).optional(),
   }),
 })
 
@@ -99,41 +94,64 @@ export const POST = withACL(
     const fee = getFeeSchedule(body.consultationMode, body.appointmentType, body.serviceCategory, body.duration)
     const appointmentTypeId = resolveAppointmentTypeId(body.consultationMode, body.appointmentType, body.serviceCategory, body.duration)
 
-    const existingPatientId = body.patient.email
-      ? await findPatientIdByEmail(body.patient.email).catch(() => null)
-      : null
+    const existingPatientId =
+      (body.patient.mobilePhone
+        ? await findPatientIdByMobile(body.patient.mobilePhone).catch(() => null)
+        : null) ??
+      (body.patient.email
+        ? await findPatientIdByEmail(body.patient.email).catch(() => null)
+        : null)
+
+    const isReturning = existingPatientId
+      ? await hasCompletedAppointment(existingPatientId, body.serviceCategory).catch(() => false)
+      : false
+    const expectedVisitType = isReturning ? 'follow-up' : 'initial'
+    if (body.appointmentType !== expectedVisitType) {
+      return NextResponse.json(
+        {
+          error: isReturning
+            ? 'You have a previous completed visit. Please book as a follow-up.'
+            : 'No previous completed visits found. Please book as an initial consultation.',
+          type: 'visit_type_mismatch',
+          expectedVisitType,
+        },
+        { status: 422 },
+      )
+    }
 
     let patientId: string
-    let isNewPatient = false
 
     if (existingPatientId) {
       patientId = existingPatientId
     } else {
-      const patient = await createPatient({
+      const p = body.patient
+      if (!p.title || !p.lastName || !p.dob || p.gender == null ||
+          !p.address1 || !p.suburb || !p.state || !p.postcode ||
+          !p.emergencyContactName || !p.emergencyContactPhone || !p.emergencyRelationshipCode) {
+        return NextResponse.json({ error: 'Patient details required for new patients.' }, { status: 400 })
+      }
+      const created = await createPatient({
         defaultPracticeId: PRACTICE_ID,
         usualDoctorId: body.providerId ?? null,
-        titleCode: TITLE_CODES[body.patient.title],
-        firstName: body.patient.firstName,
-        lastName: body.patient.lastName,
-        gender: body.patient.gender,
-        dob: body.patient.dob,
+        titleCode: TITLE_CODES[p.title],
+        firstName: p.firstName ?? null,
+        lastName: p.lastName,
+        gender: p.gender,
+        dob: p.dob,
         patientStatusCode: 1,
-        email: body.patient.email || null,
-        mobilePhone: normalizeMobileForMR(body.patient.mobilePhone),
+        email: p.email || null,
+        mobilePhone: p.mobilePhone ? normalizeMobile(p.mobilePhone) : null,
         contactMethod: 1,
       })
-      patientId = patient.id
-      isNewPatient = true
-    }
+      patientId = created.id
 
-    if (isNewPatient) {
       try {
         await createPatientAddress(patientId, {
           addressType: 1,
-          addressLine1: body.patient.address1,
-          cityCode: body.patient.suburb,
-          postcode: body.patient.postcode,
-          stateCode: body.patient.state,
+          addressLine1: p.address1,
+          cityCode: p.suburb,
+          postcode: p.postcode,
+          stateCode: p.state,
           countryCode: 'AU',
         })
       } catch (err) {
@@ -156,10 +174,10 @@ export const POST = withACL(
       }
 
       await createPatientRelationship(patientId, {
-        relationshipCode: body.patient.emergencyRelationshipCode,
-        contactName: body.patient.emergencyContactName,
+        relationshipCode: p.emergencyRelationshipCode,
+        contactName: p.emergencyContactName,
         contactMethod: 3,
-        mobilePhone: body.patient.emergencyContactPhone,
+        mobilePhone: p.emergencyContactPhone,
         isEmergency: true,
         isNOK: true,
         isFamily: false,

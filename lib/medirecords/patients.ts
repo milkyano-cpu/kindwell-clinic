@@ -46,9 +46,21 @@ export async function deletePatient(patientId: string): Promise<void> {
   await mrClient.delete(`/v1/patients/${patientId}`)
 }
 
+export function normalizeMobile(phone: string): string {
+  return phone.replace(/\s/g, '')
+}
+
 export async function findPatientIdByEmail(email: string): Promise<string | null> {
   const results = await mrClient.get<{ id: string }[]>(
     `/v1/patients/exist?email=${encodeURIComponent(email)}`,
+  )
+  return results[0]?.id ?? null
+}
+
+export async function findPatientIdByMobile(mobile: string): Promise<string | null> {
+  const normalized = normalizeMobile(mobile)
+  const results = await mrClient.get<{ id: string }[]>(
+    `/v1/patients/exist?mobileNumber=${encodeURIComponent(normalized)}`,
   )
   return results[0]?.id ?? null
 }

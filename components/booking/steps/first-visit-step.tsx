@@ -1,58 +1,106 @@
 "use client";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { VisitType, StepProps } from "@/lib/booking/types";
-import { firstVisitDurationHint } from "@/lib/booking/duration-config";
+import type { StepProps } from "@/lib/booking/types";
 
-const options: { value: VisitType; label: string; desc: string }[] = [
-  { value: "initial", label: "Initial consultation", desc: "First time with us. A more detailed session." },
-  { value: "follow-up", label: "Follow-up", desc: "You've seen us before. A quick check-in." },
-];
+function isValidEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+function isValidMobile(v: string) {
+  return /^04\d{8}$/.test(v.replace(/\s/g, ""));
+}
 
 export function FirstVisitStep({ data, update, next, back }: StepProps) {
-  const hints = data.service ? firstVisitDurationHint[data.service] : null;
+  const [mobile, setMobile] = useState(data.mobile ?? "");
+  const [email, setEmail] = useState(data.email ?? "");
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ mobile?: string; email?: string }>({});
 
-  const handleSelect = (visitType: VisitType) => {
-    // Duration will be set properly in consultation-mode step; clear it on visit type change
-    update({ visitType, duration: null });
+  const validate = () => {
+    const e: { mobile?: string; email?: string } = {};
+    if (!mobile || !isValidMobile(mobile)) e.mobile = "Enter a valid Australian mobile (+614xxxxxxxx or 04xxxxxxxx).";
+    if (!email || !isValidEmail(email)) e.email = "Enter a valid email address.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleContinue = async () => {
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      const cleanMobile = mobile.replace(/\s/g, "");
+      const params = new URLSearchParams({ mobile: cleanMobile, email, service: data.service! });
+      const res = await fetch(`/api/patient-status?${params}`);
+      if (!res.ok) throw new Error();
+      const result = await res.json() as { visitType: "initial" | "follow-up" };
+      const mobileChanged = data.mobile !== null && data.mobile !== cleanMobile;
+      const emailChanged = data.email !== null && data.email !== email;
+      update({
+        mobile: cleanMobile,
+        email,
+        visitType: result.visitType,
+        duration: null,
+        patient: (mobileChanged || emailChanged) ? null : data.patient,
+      });
+      next();
+    } catch {
+      setErrors({ mobile: "Unable to check your details. Please try again." });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6 text-center">
-      <h1 className="text-4xl font-bold text-[#6E78FF] text-balance">Is this your first visit?</h1>
-      <p className="text-muted-foreground text-sm">This helps us set the right appointment length.</p>
+      <h1 className="text-4xl font-bold text-[#6E78FF] text-balance">Let&apos;s get you booked.</h1>
+      <p className="text-muted-foreground text-sm">
+        We&apos;ll use these to check if you&apos;re a returning patient.
+      </p>
 
       <div className="space-y-4 text-left">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => handleSelect(opt.value)}
-            className="w-full flex items-center gap-3 rounded-xl border border-[#6E78FF] bg-white p-4 transition-colors hover:bg-[#6E78FF]/5"
-          >
-            <span
-              className={`h-6 w-6 flex-shrink-0 rounded-full border-2 border-[#6E78FF] ${
-                data.visitType === opt.value ? "bg-[#6E78FF]" : "bg-white"
-              }`}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Mobile number</label>
+          <div className={`flex rounded-lg border focus-within:ring-1 ${errors.mobile ? "border-red-400 focus-within:ring-red-400" : "border-gray-300 focus-within:ring-[#6E78FF]"}`}>
+            <span className="flex items-center px-3 text-sm text-gray-500 border-r">AU</span>
+            <input
+              type="tel"
+              value={mobile}
+              placeholder="04xxxxxxxxx"
+              maxLength={13}
+              disabled={loading}
+              onChange={(e) => { setMobile(e.target.value); setErrors((p) => ({ ...p, mobile: undefined })); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
+              className="w-full rounded-r-lg px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none"
             />
-            <span className="flex-1">
-              <span className="block font-semibold text-[#6E78FF]">{opt.label}</span>
-              <span className="block text-sm text-muted-foreground">{opt.desc}</span>
-            </span>
-            {hints?.[opt.value] != null && (
-              <span className="flex-shrink-0 rounded-full bg-[#6E78FF]/10 px-3 py-1 text-sm font-medium text-[#6E78FF]">
-                {hints[opt.value]} min
-              </span>
-            )}
-          </button>
-        ))}
+          </div>
+          {errors.mobile && <p className="text-xs text-red-600">{errors.mobile}</p>}
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Email address</label>
+          <input
+            type="email"
+            value={email}
+            placeholder="you@example.com"
+            disabled={loading}
+            onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })); }}
+            onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
+            className={`w-full rounded-lg border px-4 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+              errors.email ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-[#6E78FF]"
+            }`}
+          />
+          {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
+        </div>
       </div>
 
       <div className="flex justify-center">
         <Button
-          disabled={!data.visitType}
-          onClick={next}
+          disabled={!mobile || !email || loading}
+          onClick={handleContinue}
           className="w-[300px] bg-[#6E78FF] hover:bg-[#6E78FF]/90"
         >
-          Continue
+          {loading ? "Checking…" : "Continue"}
         </Button>
       </div>
 

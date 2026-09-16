@@ -95,7 +95,8 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
     if (initiated.current) return;
     initiated.current = true;
 
-    if (!data.service || !data.visitType || !data.consultationMode || !data.slot || !data.patient) {
+    const needsPatient = data.visitType === "initial";
+    if (!data.service || !data.visitType || !data.consultationMode || !data.slot || !data.email || (needsPatient && !data.patient)) {
       setBookingError("Booking data incomplete. Please go back and try again.");
       setLoading(false);
       return;
@@ -107,6 +108,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
     }
 
     const { patient } = data;
+    const isFollowUp = data.visitType === "follow-up";
 
     const run = async () => {
       let appointmentId = data.appointmentId;
@@ -120,18 +122,9 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
               .join("\n")
           : undefined;
 
-        const bookingRes = await fetch("/api/booking", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Idempotency-Key": bookingKey },
-          body: JSON.stringify({
-            scheduleTime: data.slot,
-            consultationMode: data.consultationMode,
-            appointmentType: data.visitType,
-            serviceCategory: data.service,
-            ...(data.duration ? { duration: data.duration } : {}),
-            ...(data.providerId ? { providerId: data.providerId } : {}),
-            ...(suitabilityNotes ? { notes: suitabilityNotes } : {}),
-            patient: {
+        const patientPayload = isFollowUp
+          ? { email: data.email, mobilePhone: data.mobile }
+          : patient && {
               title: patient.title,
               firstName: patient.firstName,
               lastName: patient.lastName,
@@ -146,7 +139,20 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
               emergencyContactName: patient.emergencyContactName,
               emergencyContactPhone: patient.emergencyContactPhone,
               emergencyRelationshipCode: RELATIONSHIP_CODE_BY_LABEL[patient.emergencyRelationship] ?? 19,
-            },
+            };
+
+        const bookingRes = await fetch("/api/booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Idempotency-Key": bookingKey },
+          body: JSON.stringify({
+            scheduleTime: data.slot,
+            consultationMode: data.consultationMode,
+            appointmentType: data.visitType,
+            serviceCategory: data.service,
+            ...(data.duration ? { duration: data.duration } : {}),
+            ...(data.providerId ? { providerId: data.providerId } : {}),
+            ...(suitabilityNotes ? { notes: suitabilityNotes } : {}),
+            patient: patientPayload,
           }),
         });
 
@@ -185,6 +191,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
   const m = seconds != null ? Math.floor(seconds / 60) : "--";
   const s = seconds != null ? String(seconds % 60).padStart(2, "0") : "--";
   const patient = data.patient;
+  const isFollowUpView = data.visitType === "follow-up";
   const error = bookingError ?? addressError ?? paymentError;
 
   return (
@@ -236,7 +243,12 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
               <span className="text-muted-foreground shrink-0">Doctor</span>
               <span className="font-medium">{data.providerName ?? "No preferred doctor"}</span>
             </div>
-            {patient && (
+            {isFollowUpView ? (
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground shrink-0">Patient</span>
+                <span className="font-medium">{data.email}</span>
+              </div>
+            ) : patient && (
               <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground shrink-0">Patient</span>
                 <span className="font-medium">{patient.firstName} {patient.lastName}</span>
@@ -296,7 +308,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
         </div>
       </div>
 
-      {addressError && (
+      {addressError && !isFollowUpView && (
         <button
           onClick={() => goTo("patient-details")}
           className="text-sm font-medium text-[#6E78FF] underline underline-offset-4"

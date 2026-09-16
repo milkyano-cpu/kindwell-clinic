@@ -50,3 +50,32 @@ export async function deleteAppointment(appointmentId: string): Promise<MRDelete
     `/v1/practices/${PRACTICE_ID}/appointments/${appointmentId}`,
   )
 }
+
+function getAppointmentTypeIdsForService(service: 'alternative-medicine' | 'smoking-cessation'): Set<string> {
+  const keys = service === 'alternative-medicine'
+    ? [
+        'MEDIRECORDS_APPT_TYPE_ALT_MED_TH_10',
+        'MEDIRECORDS_APPT_TYPE_ALT_MED_TH_15',
+        'MEDIRECORDS_APPT_TYPE_ALT_MED_TH_20',
+        'MEDIRECORDS_APPT_TYPE_ALT_MED_F2F',
+        'MEDIRECORDS_APPT_TYPE_ALT_MED_TH_FU',
+        'MEDIRECORDS_APPT_TYPE_ALT_MED_F2F_FU',
+      ]
+    : [
+        'MEDIRECORDS_APPT_TYPE_SMK_CES_F2F',
+        'MEDIRECORDS_APPT_TYPE_SMK_CES_TH_FU',
+        'MEDIRECORDS_APPT_TYPE_SMK_CES_F2F_FU',
+      ]
+  return new Set(keys.map(k => process.env[k]).filter(Boolean) as string[])
+}
+
+export async function hasCompletedAppointment(
+  patientId: string,
+  service: 'alternative-medicine' | 'smoking-cessation',
+): Promise<boolean> {
+  const typeIds = getAppointmentTypeIdsForService(service)
+  const res = await mrClient.get<MRPage<MRAppointment>>(
+    `/v1/practices/${PRACTICE_ID}/appointments?patientId=${encodeURIComponent(patientId)}&appointmentStatus=7&size=200`,
+  )
+  return (res.data ?? []).some(appt => typeIds.has(appt.appointmentTypeId))
+}

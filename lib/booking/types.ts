@@ -18,6 +18,8 @@ export interface ReferringGP {
 
 export interface BookingData {
   service: ServiceType | null;
+  email: string | null;
+  mobile: string | null;
   visitType: VisitType | null;
   suitability: SuitabilityAnswers | null;
   consultationMode: ConsultationMode | null;
