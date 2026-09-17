@@ -19,7 +19,7 @@ export function FirstVisitStep({ data, update, next, back }: StepProps) {
 
   const validate = () => {
     const e: { mobile?: string; email?: string } = {};
-    if (!mobile || !isValidMobile(mobile)) e.mobile = "Enter a valid Australian mobile (+614xxxxxxxx or 04xxxxxxxx).";
+    if (!mobile || !isValidMobile(mobile)) e.mobile = "Enter a valid Australian mobile digit phone number (04xxxxxxxx).";
     if (!email || !isValidEmail(email)) e.email = "Enter a valid email address.";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -67,7 +67,7 @@ export function FirstVisitStep({ data, update, next, back }: StepProps) {
               type="tel"
               value={mobile}
               placeholder="04xxxxxxxxx"
-              maxLength={13}
+              maxLength={11}
               disabled={loading}
               onChange={(e) => { setMobile(e.target.value); setErrors((p) => ({ ...p, mobile: undefined })); }}
               onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}

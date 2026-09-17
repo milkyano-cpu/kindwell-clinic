@@ -53,7 +53,7 @@ export const patientSchema = z
       .string()
       .refine(
         (v) => /^04\d{8}$/.test(v),
-        "Enter a valid AU mobile (04xxxxxxxxx)."
+        "Enter a valid Australian mobile digit phone number (04xxxxxxxx)."
       ),
     email: z.string().regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, "Enter a valid email.").max(100, "Max 100 characters."),
     emergencyContactName: z.string().min(1, "Required."),

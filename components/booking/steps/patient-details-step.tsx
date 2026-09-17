@@ -280,7 +280,7 @@ export function PatientDetailsStep({ data, update, next, back }: StepProps) {
                 <input
                   value={patient.mobile}
                   placeholder="04xxxxxxxxx"
-                  maxLength={12}
+                  maxLength={11}
                   inputMode="tel"
                   onChange={(e) => setField("mobile", e.target.value)}
                   className="w-full rounded-r-lg px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none"
