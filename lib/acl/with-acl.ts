@@ -15,7 +15,7 @@ export function withACL<T = unknown>(
   options: ACLOptions<T> = {},
 ) {
   return async (req: NextRequest): Promise<NextResponse> => {
-    if (options.rateLimit) {
+    if (options.rateLimit) { 
       const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous'
       const allowed = await checkRateLimit(ip, options.rateLimit)
       if (!allowed) {

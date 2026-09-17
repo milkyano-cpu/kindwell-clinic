@@ -15,9 +15,9 @@ export async function GET(req: NextRequest) {
   const r = redis // narrowed — safe to use inside callbacks
 
   // Only delete appointments we created — tracked in the slot-locks sorted set.
-  // Score = creation timestamp (ms). Cutoff = 25 min ago, giving the
-  // checkout.session.expired webhook (fires at 20 min) time to run first.
-  const cutoff = Date.now() - 25 * 60 * 1000
+  // Score = creation timestamp (ms). Cutoff = 35 min ago, giving the
+  // checkout.session.expired webhook (fires at 30 min) time to run first.
+  const cutoff = Date.now() - 35 * 60 * 1000
   const ids = await r.zrange<string[]>('slot-locks', 0, cutoff, { byScore: true })
 
   await Promise.allSettled(
