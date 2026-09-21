@@ -8,8 +8,8 @@ type PricingItem = {
   name: string;
   patientType?: string;
   price: string;
-  originalPrice: string;
-  note: string;
+  originalPrice?: string;
+  note?: string;
 };
 
 type PricingCardData = {
@@ -26,10 +26,10 @@ type PricingCardData = {
 
 const inPersonCards: PricingCardData[] = [
   {
-    badgeText: "MEDICARE CLAIM!",
-    badgeClassName: "bg-[#8CC63F]",
+    badgeText: "STANDARD PRICING",
+    badgeClassName: "bg-gray-400",
     title: "Alternative Medicine",
-    subtitle: "Medicinal Cannabis",
+    subtitle: "Alternative Medicine",
     subtitleClassName: "text-[#8CC63F]",
     noteVariant: "muted",
     service: "alternative-medicine",
@@ -39,30 +39,19 @@ const inPersonCards: PricingCardData[] = [
         duration: "30 minutes",
         name: "Initial Consultation",
         patientType: "New Patients",
-        price: "$4.10*",
-        originalPrice: "$89",
-        note: "After $84.90 Rebate from Medicare",
-      },
-      {
-        duration: "30 minutes",
-        name: "Transfer from another clinic",
-        price: "$4.10*",
-        originalPrice: "$89",
-        note: "After $84.90 Rebate from Medicare",
+        price: "$119",
       },
       {
         duration: "30 minutes",
         name: "Review Consultation",
         patientType: "Existing Patients",
-        price: "$15.10*",
-        originalPrice: "$59",
-        note: "After $43.90 Rebate from Medicare",
+        price: "$59",
       },
     ],
   },
   {
-    badgeText: "MEDICARE CLAIM!",
-    badgeClassName: "bg-[#8CC63F]",
+    badgeText: "STANDARD PRICING",
+    badgeClassName: "bg-gray-400",
     title: "Smoking Cessation",
     subtitle: "Smoking Cessation",
     subtitleClassName: "text-[#FF8D54]",
@@ -74,16 +63,13 @@ const inPersonCards: PricingCardData[] = [
         duration: "15 minutes",
         name: "Initial Consultation",
         patientType: "New Patients",
-        price: "$15.10*",
-        originalPrice: "$59",
-        note: "Rebate $43.90 from Medicare",
+        price: "$59",
       },
       {
-        duration: "10 minutes",
-        name: "Transfer from another clinic",
-        price: "$5.10*",
-        originalPrice: "$49",
-        note: "Rebate $43.90 from Medicare",
+        duration: "15 minutes",
+        name: "Review Consultation",
+        patientType: "Existing Patients",
+        price: "$49",
       },
     ],
   },
@@ -91,12 +77,12 @@ const inPersonCards: PricingCardData[] = [
 
 const telehealthCards: PricingCardData[] = [
   {
-    badgeText: "50% LIMITED TIME!",
-    badgeClassName: "bg-primary",
+    badgeText: "STANDARD PRICING",
+    badgeClassName: "bg-gray-400",
     title: "Alternative Medicine",
     subtitle: "Medicinal Cannabis",
     subtitleClassName: "text-[#8CC63F]",
-    noteVariant: "promo",
+    noteVariant: "muted",
     service: "alternative-medicine",
     mode: "telehealth",
     items: [
@@ -104,34 +90,23 @@ const telehealthCards: PricingCardData[] = [
         duration: "30 minutes",
         name: "Initial Consultation",
         patientType: "New Patients",
-        price: "$45",
-        originalPrice: "$89",
-        note: "Promo Price",
-      },
-      {
-        duration: "30 minutes",
-        name: "Transfer from another clinic",
-        price: "$45",
-        originalPrice: "$89",
-        note: "Promo Price",
+        price: "$89",
       },
       {
         duration: "30 minutes",
         name: "Review Consultation",
         patientType: "Existing Patients",
-        price: "$29",
-        originalPrice: "$59",
-        note: "Promo Price",
+        price: "$59",
       },
     ],
   },
   {
-    badgeText: "50% LIMITED TIME!",
-    badgeClassName: "bg-primary",
+    badgeText: "STANDARD PRICING",
+    badgeClassName: "bg-gray-400",
     title: "Smoking Cessation",
     subtitle: "Smoking Cessation",
     subtitleClassName: "text-[#FF8D54]",
-    noteVariant: "promo",
+    noteVariant: "muted",
     service: "smoking-cessation",
     mode: "telehealth",
     items: [
@@ -139,16 +114,13 @@ const telehealthCards: PricingCardData[] = [
         duration: "15 minutes",
         name: "Initial Consultation",
         patientType: "New Patients",
-        price: "$29",
-        originalPrice: "$59",
-        note: "Rebate $43.90 from Medicare",
+        price: "$59",
       },
       {
-        duration: "10 minutes",
-        name: "Transfer from another clinic",
-        price: "$25",
-        originalPrice: "$49",
-        note: "Rebate $43.90 from Medicare",
+        duration: "15 minutes",
+        name: "Review Consultation",
+        patientType: "Existing Patients",
+        price: "$49",
       },
     ],
   },
@@ -211,21 +183,25 @@ function PricingCard({ data }: { data: PricingCardData }) {
                       {item.price}
                     </span>
                   </p>
-                  <p className="text-xs text-muted-foreground line-through">
-                    {item.originalPrice}
-                  </p>
+                  {item.originalPrice && (
+                    <p className="text-xs text-muted-foreground line-through">
+                      {item.originalPrice}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div
-                className={cn(
-                  "text-center text-xs md:text-sm py-2 rounded-md mt-2",
-                  data.noteVariant === "promo"
-                    ? "bg-green-50 text-green-600"
-                    : "bg-gray-50 text-gray-300"
-                )}
-              >
-                {item.note}
-              </div>
+              {item.note && (
+                <div
+                  className={cn(
+                    "text-center text-xs md:text-sm py-2 rounded-md mt-2",
+                    data.noteVariant === "promo"
+                      ? "bg-green-50 text-green-600"
+                      : "bg-gray-50 text-gray-300"
+                  )}
+                >
+                  {item.note}
+                </div>
+              )}
             </div>
           </div>
         ))}
