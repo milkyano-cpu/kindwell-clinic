@@ -10,6 +10,7 @@ const schema = z.object({
   appointmentType: z.enum(['initial', 'follow-up']),
   serviceCategory: z.enum(['alternative-medicine', 'smoking-cessation']),
   scheduleTime: z.string(),
+  durationMinutes: z.number().int().positive().optional(),
 })
 
 export const POST = withACL(
@@ -20,6 +21,7 @@ export const POST = withACL(
       appointmentType: body.appointmentType,
       serviceCategory: body.serviceCategory,
       scheduleTime: body.scheduleTime,
+      durationMinutes: body.durationMinutes,
     })
 
     await logger.log({

@@ -71,6 +71,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
         appointmentType: data.visitType,
         serviceCategory: data.service,
         scheduleTime: data.slot,
+        ...(data.duration ? { durationMinutes: data.duration } : {}),
       }),
     });
     if (!paymentRes.ok) throw new Error("Failed to create checkout session. Please try again.");
@@ -184,10 +185,11 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
       .finally(() => setLoading(false));
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!data.service || !data.visitType || !data.consultationMode) return null;
+  if (!data.service || !data.visitType || !data.consultationMode || data.grossCents == null) return null;
 
   const fee = pricingConfig[data.consultationMode][data.service][data.visitType];
   const duration = data.duration ?? fee.durationMinutes;
+  const grossCents = data.grossCents;
   const m = seconds != null ? Math.floor(seconds / 60) : "--";
   const s = seconds != null ? String(seconds % 60).padStart(2, "0") : "--";
   const patient = data.patient;
@@ -259,23 +261,10 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
 
         <hr className="border-gray-100" />
 
-        {/* Fee breakdown */}
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-[#6E78FF] mb-3">Fee breakdown</p>
-          <div className="flex justify-between py-2 border-b text-sm">
-            <span>Consultation fee</span>
-            <span className="font-medium">{formatCurrency(fee.gross)}</span>
-          </div>
-          <div className="flex justify-between py-2 border-b text-sm">
-            <span>Medicare rebate</span>
-            <span className={fee.rebate > 0 ? "text-green-600" : "text-muted-foreground"}>
-              {fee.rebate > 0 ? `− ${formatCurrency(fee.rebate)}` : "N/A"}
-            </span>
-          </div>
-          <div className="flex justify-between pt-3 font-bold">
-            <span>Total due today</span>
-            <span>{formatCurrency(fee.net)}</span>
-          </div>
+        {/* Fee */}
+        <div className="flex justify-between pt-2 font-bold">
+          <span>Total due today</span>
+          <span>{formatCurrency(grossCents)}</span>
         </div>
 
         <Button
@@ -287,7 +276,7 @@ export function ConfirmPaymentStep({ data, update, goTo }: StepProps) {
             ? "Securing slot…"
             : expired
             ? "Slot expired"
-            : `Confirm & Pay ${formatCurrency(fee.net)}`}
+            : `Confirm & Pay ${formatCurrency(grossCents)}`}
         </Button>
 
         {paymentError && (

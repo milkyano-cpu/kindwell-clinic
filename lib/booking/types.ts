@@ -26,6 +26,7 @@ export interface BookingData {
   duration: 5 | 10 | 15 | 20 | null;
   providerId: string | null;
   providerName: string | null;
+  grossCents: number | null;
   slot: string | null; // "YYYY-MM-DDTHH:MM" — full ISO schedule time
   appointmentId: string | null;
   bookingKey: string | null; // idempotency key — stable per slot selection, cleared when slot changes

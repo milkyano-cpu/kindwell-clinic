@@ -1,21 +1,7 @@
 import { stripe } from './client'
-import type { ConsultationMode, AppointmentType, ServiceCategory } from './fee'
+import { resolvePriceId, type ConsultationMode, type AppointmentType, type ServiceCategory } from './fee'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-
-function resolvePriceId(
-  mode: ConsultationMode,
-  type: AppointmentType,
-  service: ServiceCategory,
-): string {
-  const svc = service === 'alternative-medicine' ? 'ALT_MED' : 'SMOKING'
-  const t = type === 'initial' ? 'INITIAL' : 'FOLLOWUP'
-  const m = mode === 'telehealth' ? 'TELEHEALTH' : 'F2F'
-  const key = `STRIPE_PRICE_${svc}_${t}_${m}`
-  const val = process.env[key]
-  if (!val) throw new Error(`Missing env: ${key}`)
-  return val
-}
 
 export interface BookingCheckoutParams {
   appointmentId: string
@@ -23,10 +9,11 @@ export interface BookingCheckoutParams {
   appointmentType: AppointmentType
   serviceCategory: ServiceCategory
   scheduleTime: string
+  durationMinutes?: number
 }
 
 export async function createBookingCheckoutSession(params: BookingCheckoutParams) {
-  const priceId = resolvePriceId(params.consultationMode, params.appointmentType, params.serviceCategory)
+  const priceId = resolvePriceId(params.consultationMode, params.appointmentType, params.serviceCategory, params.durationMinutes)
 
   return stripe.checkout.sessions.create({
     mode: 'payment',

@@ -79,7 +79,10 @@ export function DateTimeStep({ data, update, next, back }: StepProps) {
       `/api/slots?date=${dateStr}&mode=${data.consultationMode}&type=${data.visitType}&service=${data.service}${durationParam}${providerParam}`
     )
       .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
-      .then((json) => setSlots(json.slots ?? []))
+      .then((json) => {
+        setSlots(json.slots ?? []);
+        if (json.fee?.grossCents != null) update({ grossCents: json.fee.grossCents });
+      })
       .catch(() => setSlotsError("Couldn't load slots. Please try another date."))
       .finally(() => setLoadingSlots(false));
   }, [date, data.service, data.visitType, data.consultationMode]);

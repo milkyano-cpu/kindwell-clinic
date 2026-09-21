@@ -63,7 +63,6 @@ function getAppointmentTypeIdsForService(service: 'alternative-medicine' | 'smok
       ]
     : [
         'MEDIRECORDS_APPT_TYPE_SMK_CES_F2F',
-        'MEDIRECORDS_APPT_TYPE_SMK_CES_TH_FU',
         'MEDIRECORDS_APPT_TYPE_SMK_CES_F2F_FU',
       ]
   return new Set(keys.map(k => process.env[k]).filter(Boolean) as string[])

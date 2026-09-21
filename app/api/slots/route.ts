@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { withACL } from '@/lib/acl/with-acl'
 import { getAvailableSlots } from '@/lib/medirecords/availability'
-import { getFeeSchedule } from '@/lib/stripe/fee'
+import { getFeeSchedule, getGrossCents } from '@/lib/stripe/fee'
 
 const querySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
@@ -25,21 +25,15 @@ export const GET = withACL(
     const { date, mode, type, service, duration, providerId } = result.data
     const fee = getFeeSchedule(mode, type, service, duration)
 
-    const slots = await getAvailableSlots({
-      date,
-      durationMinutes: fee.durationMinutes,
-      providerId,
-    })
+    const [slots, grossCents] = await Promise.all([
+      getAvailableSlots({ date, durationMinutes: fee.durationMinutes, providerId }),
+      getGrossCents(mode, type, service, fee.durationMinutes),
+    ])
 
     return NextResponse.json({
       date,
       slots, // { time: string; available: boolean }[]
-      fee: {
-        grossCents: fee.grossCents,
-        medicareRebateCents: fee.medicareRebateCents,
-        outOfPocketCents: fee.outOfPocketCents,
-        durationMinutes: fee.durationMinutes,
-      },
+      fee: { grossCents, durationMinutes: fee.durationMinutes },
     })
   },
   { rateLimit: 'default' },
